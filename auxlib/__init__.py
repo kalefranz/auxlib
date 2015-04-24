@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """auxiliary library to the python standard library"""
-from packaging import get_version
+from auxlib.logs import set_app_to_stderr
+set_app_to_stderr()
+from auxlib.packaging import get_version
 __version__ = get_version()
 __author__ = 'Kale Franz'
 __contact__ = 'kale@franz.io'

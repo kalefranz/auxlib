@@ -22,7 +22,7 @@ def get_version():
     """
 
     def _get_version_from_pkg_info():
-        return re.search('^Version:\s+(\S+)', open('../PKG-INFO', 'r').read(), re.MULTILINE).group(1)
+        return re.search('^Version:\s+(\S+)', open('PKG-INFO', 'r').read(), re.MULTILINE).group(1)
 
     def _get_version_from_git_tag():
         """Return a PEP440-compliant version derived from the git status.
@@ -59,7 +59,7 @@ def get_version():
 
         return version
 
-    if os.path.exists('../PKG-INFO'):
+    if os.path.exists('PKG-INFO'):
         return _get_version_from_pkg_info()
 
     if os.path.exists('.git'):
