@@ -1,6 +1,11 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+import logging
 import os
 import re
 import subprocess
+
+log = logging.getLogger(__name__)
 
 
 def get_version():
@@ -37,7 +42,7 @@ def get_version():
                 return subprocess.check_output(["git", "describe", "--tags"]).strip()
             except subprocess.CalledProcessError as e:
                 if e.returncode == 128:
-                    return "0.0.0"
+                    return "0.0.0.0"
                 else:
                     raise
 
@@ -54,7 +59,6 @@ def get_version():
 
         return version
 
-
     if os.path.exists('../PKG-INFO'):
         return _get_version_from_pkg_info()
 
@@ -63,6 +67,17 @@ def get_version():
 
     raise RuntimeError("Could not get package version (no .git or PKG-INFO)")
 
+
+def strip_comments(l):
+    return l.split('#', 1)[0].strip()
+
+
+def requirements(*f):
+    return [
+        r for r in (
+            strip_comments(l) for l in open(
+                os.path.join(os.getcwd(), 'requirements', *f)).readlines()
+        ) if r]
 
 if __name__ == "__main__":
     print(get_version())
