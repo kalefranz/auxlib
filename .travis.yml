@@ -7,6 +7,7 @@ env:
     TRAVISCI_ENABLED=1
   matrix:
     - TOXENV=py27
+    - TOXENV=pypy
 
 before_install:
   - |
@@ -19,7 +20,7 @@ install:
   - pip install tox
 
 script:
-  - tox -v -- -v
+  - tox
 
 after_success:
   - .tox/$TRAVIS_PYTHON_VERSION/bin/coveralls
