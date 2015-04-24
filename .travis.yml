@@ -6,7 +6,7 @@ env:
   global:
     TRAVISCI_ENABLED=1
   matrix:
-    - TOXENV=2.7
+    - TOXENV=py27
 
 before_install:
   - |
