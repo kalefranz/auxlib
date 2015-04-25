@@ -1,10 +1,8 @@
 """This module provides facilities for serializable, validatable, and type-enforcing
 domain objects.
 
-This module has basically the same motivations as the python Marshmallow package.
+This module has many of the same motivations as the python Marshmallow package.
 <http://marshmallow.readthedocs.org/en/latest/why.html>
-While this module is inspired by some of the python ideas and patterns in Marshmallow and other
-python ORMs, it is both simpler to use and more flexible.
 
 
 Examples:
@@ -38,7 +36,7 @@ log = logging.getLogger(__name__)
 
 NoneType = types.NoneType
 StringType = StringTypes = basestring
-IntTypes = (int, long)
+# IntTypes = (int, long)
 NumberTypes = (int, long, float, complex)
 SequenceTypes = (list, tuple, dict, set)
 # TODO: NullType
@@ -62,47 +60,49 @@ class Field(object):
         dump (boolean, optional):
     """
 
-    def __init__(self, types_, default=None, required=True, validation=None, dump=True):
-        if isinstance(types_, (StringTypes, NumberTypes)):
-            # if types_ is a literal, convert to type of literal and set default
-            self._types = type(types_)
-            self._default = types_
-        else:
-            self._types = types_
-            self._default = default
+    _type = None
+
+    def __new__(cls, *args, **kwargs):
+        if cls.__name__ == 'Field':
+            raise RuntimeError("The Field class should never be instantiated. "
+                               "Use one of its typed subclasses.")
+        return super(Field, cls).__new__(cls)
+
+    def __init__(self, default=None, required=True, validation=None, in_dump=True):
+        self._default = default
         self._required = required
         self._validation = validation
-        self._dump = dump
-        self._name = None
+        self._in_dump = in_dump
 
     @property
     def name(self):
-        return self._name
+        try:
+            return self._name
+        except AttributeError:
+            log.error("The name attribute has not been set for this field. "
+                      "Call set_name at class creation time.")
+            raise
 
-    def set_name(self, value):
-        self._name = value
+    def set_name(self, name):
+        self._name = name
         return self
 
-    def validate(self, value):
-        self._validate_types(value)
-        self._validate_custom(value)
-        return True
+    def __get__(self, obj, objtype):
+        try:
+            return obj.__dict__[self.name]
+        except AttributeError:
+            log.error("The name attribute has not been set for this field.")
+            raise
+        except KeyError:
+            log.error("A value for {} has not been set".format(self.name))
+            raise
 
-    def _validate_types(self, value):
-        if value is None and not self.is_required:
-            return
-        elif self.is_enum:
-            try:
-                self._types(value)
-            except ValueError:
-                raise ValidationError(self.name, value)
-        else:
-            if not isinstance(value, self._types):
-                raise ValidationError(self.name, value, self._types)
-
-    def _validate_custom(self, value):
-        if self._validation is not None and not self._validation(value):
-            raise ValidationError(self.name, value)
+    def __set__(self, obj, val):
+        if not isinstance(val, self._type):
+            raise TypeError("Must be a %s" % repr(self._type))
+        if self._validation is not None and not self._validation(val):
+            raise ValidationError(self.name, val)
+        obj.__dict__[self.name] = val
 
     @property
     def is_required(self):
@@ -110,22 +110,22 @@ class Field(object):
 
     @property
     def is_enum(self):
-        return isinstance(self._types, type) and issubclass(self._types, Enum)
+        return isinstance(self._type, type) and issubclass(self._type, Enum)
 
     @property
     def type(self):
-        return self._types
+        return self._type
 
     @property
     def default(self):
         return self._default
 
     @property
-    def dump(self):
-        return self._dump
+    def in_dump(self):
+        return self._in_dump
 
     def __repr__(self):
-        inputs = [str(self._types)]
+        inputs = [str(self._type)]
         if not self._required:
             inputs.append("required={}".format(self._required))
         if self._default is not None:
@@ -133,18 +133,34 @@ class Field(object):
         return "Field({})".format(", ".join(inputs))
 
 
+class IntField(Field):
+    _type = (int, long)
+
+
+class StringField(Field):
+    _type = basestring
+
+
+class DateField(Field):
+    pass
+
+
+
+
 class EntityType(type):
     def __init__(cls, name, bases, attr):
         super(EntityType, cls).__init__(name, bases, attr)
         cls.__fields__ = dict(cls.__fields__) if hasattr(cls, '__fields__') else dict()
-        cls.__fields__.update({key: value.set_name(key)
-                               for key, value in cls.__dict__.iteritems()
-                               if isinstance(value, Field)})
-        cls.__register__()
+        cls.__fields__.update({name: field.set_name(name)
+                               for name, field in cls.__dict__.items()
+                               if isinstance(field, Field)})
+        if hasattr(cls, '__register__'):
+            cls.__register__()
 
 
 class Entity(object):
     __metaclass__ = EntityType
+    __fields__ = dict()
 
     def __init__(self, **kwargs):
         for key in self.__fields__:
@@ -184,11 +200,7 @@ class Entity(object):
         return cls(**data_dict)
 
     def validate(self):
-        for key, field in self.__fields__.iteritems():
-            if (field._types == datetime.datetime
-                    and isinstance(getattr(self, key, None), StringTypes)):
-                setattr(self, key, dateutil.parser.parse(getattr(self, key)))
-            field.validate(getattr(self, key, None))
+        (getattr(self, name) for name, field in self.__fields__.items() if field.is_required)
 
     def __repr__(self):
         return "{}({})".format(
@@ -215,7 +227,6 @@ class Entity(object):
             cls.__dump_fields_cache = set([field for field in cls.__fields__.itervalues()
                                        if field.dump])
         return cls.__dump_fields_cache
-
 
     def __eq__(self, other):
         if self.__class__ != other.__class__:
