@@ -6,12 +6,16 @@ This module has many of the same motivations as the python Marshmallow package.
 
 
 Examples:
+    >>> class Color(Enum):
+    ...     blue = 0
+    ...     black = 1
+    ...     red = 2
     >>> class Truck(Entity):
-    ...     color = Field(StringType)
-    ...     weight = Field(float)
-    ...     wheels = Field(int, default=4, dump=False)
+    ...     color = EnumField(Color)
+    ...     weight = NumberField()
+    ...     wheels = IntField(4, in_dump=False)
 
-    >>> truck = Truck(weight=44.4, color='blue', wheels=18)
+    >>> truck = Truck(weight=44.4, color=Color.blue, wheels=18)
     >>> truck.wheels
     18
     >>> truck.color
@@ -37,7 +41,6 @@ log = logging.getLogger(__name__)
 NoneType = types.NoneType
 StringType = StringTypes = basestring
 # IntTypes = (int, long)
-NumberTypes = (int, long, float, complex)
 SequenceTypes = (list, tuple, dict, set)
 # TODO: NullType
 
@@ -60,13 +63,11 @@ class Field(object):
         dump (boolean, optional):
     """
 
-    _type = None
-
-    def __new__(cls, *args, **kwargs):
-        if cls.__name__ == 'Field':
-            raise RuntimeError("The Field class should never be instantiated. "
-                               "Use one of its typed subclasses.")
-        return super(Field, cls).__new__(cls)
+    # def __new__(cls, default=None, required=True, validation=None, in_dump=True):
+    #     if cls.__name__ == 'Field':
+    #         raise RuntimeError("The Field class should never be instantiated. "
+    #                            "Use one of its typed subclasses.")
+    #     return super(Field, cls).__new__(cls, default, required, validation, in_dump)
 
     def __init__(self, default=None, required=True, validation=None, in_dump=True):
         self._default = default
@@ -94,15 +95,23 @@ class Field(object):
             log.error("The name attribute has not been set for this field.")
             raise
         except KeyError:
-            log.error("A value for {} has not been set".format(self.name))
-            raise
+            if self.default is not None:
+                return self.default
+            else:
+                log.error("A value for {} has not been set".format(self.name))
+                raise
 
     def __set__(self, obj, val):
+        self.validate(val)
+        obj.__dict__[self.name] = val
+
+    def validate(self, val):
         if not isinstance(val, self._type):
-            raise TypeError("Must be a %s" % repr(self._type))
+            raise ValidationError(self.name, val, self._type)
         if self._validation is not None and not self._validation(val):
             raise ValidationError(self.name, val)
-        obj.__dict__[self.name] = val
+        return True
+
 
     @property
     def is_required(self):
@@ -130,7 +139,7 @@ class Field(object):
             inputs.append("required={}".format(self._required))
         if self._default is not None:
             inputs.append("default={}".format(self._default))
-        return "Field({})".format(", ".join(inputs))
+        return "{}({})".format(self.__class__.__name__, ", ".join(inputs))
 
 
 class IntField(Field):
@@ -141,21 +150,48 @@ class StringField(Field):
     _type = basestring
 
 
+class NumberField(Field):
+    _type = (int, long, float, complex)
+
+
 class DateField(Field):
     pass
 
 
+class EnumField(Field):
+
+    def __init__(self, enum_class, *args, **kwargs):
+        self._type = enum_class
+        super(EnumField, self).__init__(*args, **kwargs)
+
+    def __get__(self, obj, objtype):
+        return super(EnumField, self).__get__(obj, objtype).value
+
+    def __set__(self, obj, val):
+        try:
+            value = val if isinstance(val, self._type) else self._type(val)
+            super(EnumField, self).__set__(obj, value)
+        except ValueError:
+            raise ValidationError(self.name, val, self._type)
+
 
 
 class EntityType(type):
+
     def __init__(cls, name, bases, attr):
         super(EntityType, cls).__init__(name, bases, attr)
         cls.__fields__ = dict(cls.__fields__) if hasattr(cls, '__fields__') else dict()
         cls.__fields__.update({name: field.set_name(name)
                                for name, field in cls.__dict__.items()
                                if isinstance(field, Field)})
+        cls.__validate_defaults()
         if hasattr(cls, '__register__'):
             cls.__register__()
+
+    def __validate_defaults(cls):
+        (field.validate(field.default)
+         for field in cls.__fields__.values()
+         if field.default is not None)
 
 
 class Entity(object):
@@ -168,21 +204,8 @@ class Entity(object):
                 setattr(self, key, kwargs.get(key))
             else:
                 field = self.__fields__.get(key)
-                value = getattr(self, key, None)
-                if isinstance(value, Field):
-                    # value set from an inherited class, use field default
-                    default = field.default() if callable(field.default) else field.default
-                    if default is None:  # cannot have default of None, remove the field from the instance  # noqa
-                        try:
-                            # delete it if we can, otherwise just have to mask it and live with it
-                            delattr(self, key)
-                        except AttributeError:
-                            setattr(self, key, None)
-                    else:
-                        setattr(self, key, default)
-                elif field.is_required:
-                    # now safe to use value, with validation
-                    setattr(self, key, value)
+                if field.is_required:
+                    setattr(self, key, field.default)
         self.validate()
 
     @classmethod
@@ -203,9 +226,10 @@ class Entity(object):
         (getattr(self, name) for name, field in self.__fields__.items() if field.is_required)
 
     def __repr__(self):
+        _repr = lambda val: repr(val.value) if isinstance(val, Enum) else repr(val)
         return "{}({})".format(
             self.__class__.__name__,
-            ", ".join("{}={}".format(key, repr(value)) for key, value in self.__dict__.items()))
+            ", ".join("{}={}".format(key, _repr(value)) for key, value in self.__dict__.items()))
 
     @classmethod
     def __register__(cls):
@@ -225,7 +249,7 @@ class Entity(object):
     def __dump_fields(cls):
         if '__dump_fields_cache' not in cls.__dict__:
             cls.__dump_fields_cache = set([field for field in cls.__fields__.itervalues()
-                                       if field.dump])
+                                           if field.in_dump])
         return cls.__dump_fields_cache
 
     def __eq__(self, other):
@@ -237,7 +261,7 @@ class Entity(object):
         return sum(hash(getattr(self, field)) for field in self.__fields__)
 
 
-def find_or_none(key, search_maps):
+def find_or_none(key, search_maps, map_index=0):
     """Return the value of the first key found in the list of search_maps,
     otherwise return None.
 
@@ -257,10 +281,11 @@ def find_or_none(key, search_maps):
 
     """
     try:
-        for d in search_maps:
-            return (getattr(d, key) if getattr(d, key) is not None
-                    else find_or_none(key, search_maps[1:]))
-        else:
-            return None
+        attr = getattr(search_maps[map_index], key)
+        return attr if attr is not None else find_or_none(key, search_maps[1:])
     except AttributeError:
-        return find_or_none(key, search_maps[1:])
+        # not found in first map object, so go to next
+        return find_or_none(key, search_maps, map_index+1)
+    except IndexError:
+        # ran out of map objects to search
+        return None

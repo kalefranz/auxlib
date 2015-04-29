@@ -4,6 +4,9 @@ import logging
 import os
 import re
 import subprocess
+import pkg_resources
+
+import auxlib
 
 log = logging.getLogger(__name__)
 
@@ -22,7 +25,9 @@ def get_version():
     """
 
     def _get_version_from_pkg_info():
-        return re.search('^Version:\s+(\S+)', open('PKG-INFO', 'r').read(), re.MULTILINE).group(1)
+        #pkg_info = pkg_resources.resource_string(auxlib.__name__, 'PKG-INFO')
+        pkg_info = open('PKG-INFO', 'r').read()
+        return re.search('^Version:\s+(\S+)', pkg_info, re.MULTILINE).group(1)
 
     def _get_version_from_git_tag():
         """Return a PEP440-compliant version derived from the git status.
@@ -59,10 +64,17 @@ def get_version():
 
         return version
 
-    if os.path.exists('PKG-INFO'):
+    def is_git_repo(path):
+        if path == '/':
+            return False
+        else:
+            return os.path.isdir(os.path.join(path, '.git')) or is_git_repo(os.path.dirname(path))
+
+    if os.path.isfile('PKG-INFO'):
         return _get_version_from_pkg_info()
 
-    if os.path.exists('.git'):
+    here = os.path.abspath(os.path.expanduser(os.path.dirname(__file__)))
+    if is_git_repo(here):
         return _get_version_from_git_tag()
 
     raise RuntimeError("Could not get package version (no .git or PKG-INFO)")

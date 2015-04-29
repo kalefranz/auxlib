@@ -1,6 +1,15 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""A specialized map implementation to manage configuration and context information."""
+"""A specialized map implementation to manage configuration and context information.
+
+Features:
+  * Uses YAML configuration files
+  * Use environment variables to override config file
+  * Can pass a list of required parameters at initialization
+  * Works with encrypted files
+  * Accepts multiple config files
+
+"""
 import logging
 import sys
 
