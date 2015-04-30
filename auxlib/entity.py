@@ -24,6 +24,7 @@ Examples:
     [('color', 'blue'), ('weight', 44.4)]
 
 """
+from abc import ABCMeta, abstractmethod
 import datetime
 import logging
 
@@ -62,12 +63,6 @@ class Field(object):
         validation (callable, optional):
         dump (boolean, optional):
     """
-
-    # def __new__(cls, default=None, required=True, validation=None, in_dump=True):
-    #     if cls.__name__ == 'Field':
-    #         raise RuntimeError("The Field class should never be instantiated. "
-    #                            "Use one of its typed subclasses.")
-    #     return super(Field, cls).__new__(cls, default, required, validation, in_dump)
 
     def __init__(self, default=None, required=True, validation=None, in_dump=True):
         self._default = default
@@ -197,6 +192,7 @@ class EntityType(type):
 class Entity(object):
     __metaclass__ = EntityType
     __fields__ = dict()
+    # TODO: add arg order to fields like in enum34
 
     def __init__(self, **kwargs):
         for key in self.__fields__:
@@ -236,14 +232,11 @@ class Entity(object):
         pass
 
     def dump(self):
-        d = self.__dict__
-        convert = lambda v: (v.isoformat() if hasattr(v, 'isoformat')
-                             else v.value if hasattr(v, 'value')
-                             else v )
         return {field.name: value
-                for field, value in ((field, convert(d[field.name]))  # run conversion on values
-                                     for field in self.__dump_fields())
-                if value is not None or field.is_required}  # filter out final values
+                for field, value in ((field, getattr(self, field.name))
+                                     for field in self.__dump_fields()
+                                     if field.is_required)
+                if value is not None}
 
     @classmethod
     def __dump_fields(cls):

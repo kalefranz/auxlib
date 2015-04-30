@@ -1,18 +1,17 @@
 from enum import Enum
 
 from testtools import TestCase, ExpectedException
-from ddt import ddt, unpack, data
 
 from auxlib.exceptions import ValidationError
 
-from auxlib.entity import Entity, StringField, IntField, EnumField
+from auxlib.entity import Entity, StringField, IntField, EnumField, Field
 
 
 class Color(Enum):
-    red = 'red'
-    green = 'green'
-    blue = 'blue'
-    black = 'black'
+    Red = 'red'
+    Green = 'green'
+    Blue = 'blue'
+    Black = 'black'
 
 
 class Number(Enum):
@@ -79,73 +78,183 @@ class EntityTests(TestCase):
         self.assertEqual(14, se2.integer_field)
 
 
-# @ddt
 # class FieldTests(TestCase):
 #
-#     @unpack
-#     @data((str, 'abc'), (unicode, u'abc'), (float, 1.234), (int, 42), (types.NoneType, None),
-#           (types.StringTypes, u'abc'), (types.StringTypes, 'abc'), (Number, 1.234), (Number, 42), )
-#     def test_positive_validation_with_multiple_types(self, types_, value):
-#         field = Field(types_)
-#         field._validate_types(value)
-#
-#     @unpack
-#     @data((int, 'abc'), (float, u'abc'), (str, 1.234), (unicode, 42), (str, None),
-#           (complex, u'abc'), (Number, 'abc'), (types.StringTypes, 1.234), (float, 42), )
-#     def test_negative_validation_multiple_types(self, types_, value):
-#         field = Field(types_)
-#         with ExpectedException(ValidationError):
-#             field._validate_types(value)
-#
-#     def test_custom_validation(self):
-#         field = Field(int, validation=lambda x: x == 2)
-#         field.validate(2)
-#         with ExpectedException(ValidationError):
-#             field.validate('blah')
-#
-#     def test_required(self):
-#         field = EnumField(ChooseOne, required=False)
-#         field = ChooseOne.c
-#         field.validate('c')
-#         field.validate(None)
-#
-#         field = IntField(required=False)
-#         field.validate(42)
-#         field.validate(None)
+#     def test_cant_instantiate_field(self):
+#         f = Field()
+
+class EnumEntity(Entity):
+    enum_field = EnumField(Color)
+    enum_field_w_default = EnumField(Number, Number.Three)
+    enum_field_w_default_wo_required = EnumField(Color, Color.Green, False)
+    enum_field_w_xtra_validation = EnumField(Number, 2,
+                                             validation=lambda v: v in (Number.Two, Number.Three))
+    enum_field_wo_dump = EnumField(Color, Color.Black, in_dump=False)
 
 
-# class EnumFieldTests(TestCase):
-#
-#     def test_enum_field_required(self):
-#         choice1 = EnumField(ChooseOne, default=ChooseOne.A)
-#         self.assertEqual(ChooseOne.A, choice1.default)
-#         self.assertTrue(choice1.is_required)
-#
-#         choice1.set_name('choice1')
-#         self.assertEqual('choice1', choice1.name)
-#
-#         self.assertTrue(choice1.validate(ChooseOne('a')))
-#         self.assertTrue(choice1.validate(ChooseOne('b')))
-#         self.assertTrue(choice1.validate(ChooseOne('c')))
-#
-#         with ExpectedException(ValidationError):
-#             self.assertTrue(choice1.validate(ChooseOne('d')))
-#         with ExpectedException(ValidationError):
-#             self.assertTrue(choice1.validate(ChooseOne(2)))
-#
-#     def test_enum_field_not_required(self):
-#         choice2 = EnumField(ChooseOne, required=False)
-#         self.assertEqual(None, choice2.default)
-#         self.assertFalse(choice2.is_required)
-#
-#         self.assertTrue(choice2.validate(ChooseOne('a')))
-#         self.assertTrue(choice2.validate(ChooseOne('b')))
-#         self.assertTrue(choice2.validate(ChooseOne('c')))
-#
-#         with ExpectedException(ValidationError):
-#             self.assertTrue(choice2.validate(ChooseOne('d')))
-#         with ExpectedException(ValidationError):
-#             self.assertTrue(choice2.validate(ChooseOne(2)))
+class EnumFieldTests(TestCase):
+
+    def test_optionless_enum(self):
+        ee = EnumEntity(enum_field=Color.Red)
+        assert ee.enum_field == 'red'
+
+    def test_assignment(self):
+        ee = EnumEntity(enum_field=Color.Red)
+        assert ee.enum_field == 'red'
+        assert ee.enum_field_w_default == 3
+        assert ee.enum_field_w_default_wo_required == 'green'
+        assert ee.enum_field_w_xtra_validation == 2
+        assert ee.enum_field_wo_dump == 'black'
+
+        ee.enum_field = 'blue'
+        ee.enum_field_w_default = 2
+        ee.enum_field_w_default_wo_required = 'red'
+        ee.enum_field_w_xtra_validation = 3
+        ee.enum_field_wo_dump = 'red'
+
+        assert ee.enum_field == 'blue'
+        assert ee.enum_field_w_default == 2
+        assert ee.enum_field_w_default_wo_required == 'red'
+        assert ee.enum_field_w_xtra_validation == 3
+        assert ee.enum_field_wo_dump == 'red'
+
+        ee.enum_field = Color.Black
+        ee.enum_field_w_default = 0
+        ee.enum_field_w_default_wo_required = Color.Black
+        ee.enum_field_w_xtra_validation = 2
+        ee.enum_field_wo_dump = Color.Black
+
+        assert ee.enum_field == 'black'
+        assert ee.enum_field_w_default == 0
+        assert ee.enum_field_w_default_wo_required == 'black'
+        assert ee.enum_field_w_xtra_validation == 2
+        assert ee.enum_field_wo_dump == 'black'
+
+        with ExpectedException(ValidationError):
+            ee.enum_field_w_default_wo_required = None
+
+    def test_default(self):
+        ee = EnumEntity(enum_field=Color.Red)
+        assert ee.enum_field_w_default == 3
+        assert ee.enum_field_w_default_wo_required == 'green'
+
+        ee2 = EnumEntity(enum_field=Color.Red, enum_field_w_default=2,
+                         enum_field_w_default_wo_required=Color.Blue)
+        assert ee2.enum_field_w_default == 2
+        assert ee2.enum_field_w_default_wo_required == 'blue'
+
+    def test_required_throws_exception(self):
+        with ExpectedException(ValidationError):
+            EnumEntity()
+
+    def test_wo_required_throws_exception(self):
+        with ExpectedException(ValidationError):
+            EnumEntity(enum_field=Color.Red, enum_field_w_default_wo_required=2)
+
+        with ExpectedException(ValidationError):
+            ee = EnumEntity(enum_field=Color.Red)
+            ee.enum_field_w_default_wo_required = Number.Four
+
+    def test_required(self):
+        ee = EnumEntity(enum_field=Color.Red, enum_field_w_default_wo_required='red')
+        assert ee.enum_field == 'red'
+        assert ee.enum_field_w_default_wo_required == 'red'
+
+        ee.enum_field = Color.Black
+        ee.enum_field_w_default_wo_required = 'black'
+        assert ee.enum_field == 'black'
+        assert ee.enum_field_w_default_wo_required == 'black'
+
+        with ExpectedException(ValidationError):
+            EnumEntity(enum_field_w_xtra_validation=Number.Four)
+
+    def test_validation(self):
+        with ExpectedException(ValidationError):
+            EnumEntity(enum_field='purple')
+
+        ee = EnumEntity(enum_field=Color.Red)
+        assert ee.enum_field_w_xtra_validation == 2
+
+        ee.enum_field_w_xtra_validation = 3
+        assert ee.enum_field_w_xtra_validation == 3
+
+        with ExpectedException(ValidationError):
+            ee.enum_field_w_default = 'red'
+
+        with ExpectedException(ValidationError):
+            EnumEntity(enum_field=Color.Red, enum_field_w_xtra_validation=Number.Four)
+
+        with ExpectedException(ValidationError):
+            ee.enum_field_w_xtra_validation = 1
+
+    def test_in_dump(self):
+        ee = EnumEntity(enum_field=Color.Red)
+
+        d = ee.dump()
+        assert 'enum_field_w_default_wo_required' not in d
+        assert 'enum_field_wo_dump' not in d
+        assert d.pop('enum_field') == 'red'
+        assert d.pop('enum_field_w_default') == 3
+        assert d.pop('enum_field_w_xtra_validation') == 2
+        assert len(d) == 0
 
 
 
+
+class StringEntity(Entity):
+    field = StringField()
+    field_w_default = StringField("spruce")
+    field_w_default_wo_required = StringField("elm", False)
+    field_w_validation = StringField(validation=lambda v: len(v) <= 6)
+    field_w_default_w_validation = StringField("redwood", validation=lambda v: len(v) > 6)
+    field_wo_dump = StringField("juniper", in_dump=False)
+
+
+class StringFieldTests(TestCase):
+
+    def test_assignment(self):
+        sf = StringEntity(field="maple", field_w_validation="oak")
+        assert sf.field == "maple"
+        assert sf.field_w_default == "spruce"
+        assert sf.field_w_default_wo_required == "elm"
+        assert sf.field_w_validation == "oak"
+        assert sf.field_w_default_w_validation == "redwood"
+        assert sf.field_wo_dump == "juniper"
+
+        sf.field = "cherry"
+        sf.field_w_default = "lemon"
+        sf.field_w_default_wo_required = "orange"
+        sf.field_w_validation = "plum"
+        sf.field_w_default_w_validation = "coconut"
+        sf.field_wo_dump = "pineapple"
+
+        assert sf.field == "cherry"
+        assert sf.field_w_default == "lemon"
+        assert sf.field_w_default_wo_required == "orange"
+        assert sf.field_w_validation == "plum"
+        assert sf.field_w_default_w_validation == "coconut"
+        assert sf.field_wo_dump == "pineapple"
+
+        with ExpectedException(ValidationError):
+            sf.field_w_default_wo_required = None
+
+        with ExpectedException(ValidationError):
+            sf.field_w_validation = "coconut"
+
+        with ExpectedException(ValidationError):
+            sf.field_w_default_w_validation = "plum"
+
+        with ExpectedException(ValidationError):
+            StringEntity(field=8)
+
+    def test_in_dump(self):
+        sf = StringEntity(field="maple", field_w_validation="oak")
+
+        d = sf.dump()
+        assert 'field_w_default_wo_required' not in d
+        assert 'field_wo_dump' not in d
+        assert d.pop('field') == "maple"
+        assert d.pop('field_w_default') == "spruce"
+        assert d.pop('field_w_validation') == "oak"
+        assert d.pop('field_w_default_w_validation') == "redwood"
+        assert len(d) == 0

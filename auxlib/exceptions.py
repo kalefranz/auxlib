@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class NotFoundError(LookupError):
     pass
 
