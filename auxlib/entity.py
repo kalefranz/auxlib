@@ -24,7 +24,6 @@ Examples:
     [('color', 'blue'), ('weight', 44.4)]
 
 """
-from abc import ABCMeta, abstractmethod
 import datetime
 import logging
 

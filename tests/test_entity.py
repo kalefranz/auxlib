@@ -200,8 +200,6 @@ class EnumFieldTests(TestCase):
         assert len(d) == 0
 
 
-
-
 class StringEntity(Entity):
     field = StringField()
     field_w_default = StringField("spruce")
@@ -209,9 +207,27 @@ class StringEntity(Entity):
     field_w_validation = StringField(validation=lambda v: len(v) <= 6)
     field_w_default_w_validation = StringField("redwood", validation=lambda v: len(v) > 6)
     field_wo_dump = StringField("juniper", in_dump=False)
+    field_wo_default_wo_required = StringField(required=False)
 
 
 class StringFieldTests(TestCase):
+
+    def test_set_optional_field_to_none(self):
+        sf = StringEntity(field="maple", field_w_validation="oak")
+        assert sf.field == "maple"
+        assert sf.field_w_default_wo_required == "elm"
+        assert sf.field_wo_default_wo_required is None
+
+        with ExpectedException(ValidationError):
+            sf.enum_field = None
+        sf.field_w_default_wo_required = None
+        sf.field_wo_default_wo_required = "birch"
+        assert sf.field_w_default_wo_required == "elm"
+        assert sf.field_wo_default_wo_required == "birch"
+
+        sf.field_wo_default_wo_required = None
+        assert sf.field_wo_default_wo_required is None
+
 
     def test_assignment(self):
         sf = StringEntity(field="maple", field_w_validation="oak")
