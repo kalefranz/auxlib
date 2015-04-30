@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from enum import Enum
 
 from testtools import TestCase, ExpectedException
@@ -247,14 +248,25 @@ class StringFieldTests(TestCase):
         with ExpectedException(ValidationError):
             StringEntity(field=8)
 
+    def test_assignment_unicode(self):
+        sf = StringEntity(field=u"màple", field_w_validation=u"öak")
+        assert sf.field == u"màple"
+        assert sf.field_w_validation == u"öak"
+
+        sf.field = "cherry"
+        sf.field_w_validation = "plum"
+
+        assert sf.field == "cherry"
+        assert sf.field_w_validation == "plum"
+
     def test_in_dump(self):
-        sf = StringEntity(field="maple", field_w_validation="oak")
+        sf = StringEntity(field="maple", field_w_validation=u"öak")
 
         d = sf.dump()
         assert 'field_w_default_wo_required' not in d
         assert 'field_wo_dump' not in d
         assert d.pop('field') == "maple"
         assert d.pop('field_w_default') == "spruce"
-        assert d.pop('field_w_validation') == "oak"
+        assert d.pop('field_w_validation') == u"öak"
         assert d.pop('field_w_default_w_validation') == "redwood"
         assert len(d) == 0
