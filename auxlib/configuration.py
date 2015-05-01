@@ -8,6 +8,7 @@ Features:
   * Can pass a list of required parameters at initialization
   * Works with encrypted files
   * Accepts multiple config files
+  * Can query information from consul
 
 """
 import logging

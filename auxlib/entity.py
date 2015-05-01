@@ -27,7 +27,6 @@ Examples:
 import datetime
 import logging
 
-import types
 import dateutil.parser
 from enum import Enum
 from auxlib.exceptions import ValidationError
@@ -36,20 +35,6 @@ from auxlib.collection import AttrDict
 
 
 log = logging.getLogger(__name__)
-
-
-NoneType = types.NoneType
-StringType = StringTypes = basestring
-# IntTypes = (int, long)
-SequenceTypes = (list, tuple, dict, set)
-# TODO: NullType
-
-
-# class NullType(object):
-#     def __nonzero__(self):
-#         return False
-#
-# Null = NullType()
 
 
 class Field(object):
@@ -92,19 +77,33 @@ class Field(object):
             if self.default is not None:
                 return self.default
             else:
-                log.error("A value for {} has not been set".format(self.name))
-                raise
+                raise AttributeError("A value for {} has not been set".format(self.name))
 
     def __set__(self, obj, val):
-        self.validate(val)
-        obj.__dict__[self.name] = val
+        if self.validate(val):
+            obj.__dict__[self.name] = val
+        else:
+            obj.__dict__.pop(self.name, None)
 
     def validate(self, val):
+        """
+
+        Returns:
+            True: if val is valid
+            False: if val should be unset for the field
+
+        Raises:
+            ValidationError
+        """
         if not isinstance(val, self._type):
-            raise ValidationError(self.name, val, self._type)
-        if self._validation is not None and not self._validation(val):
+            if val is None and not self.is_required:
+                return False
+            else:
+                raise ValidationError(self.name, val, self._type)
+        elif self._validation is not None and not self._validation(val):
             raise ValidationError(self.name, val)
-        return True
+        else:
+            return True
 
 
     @property
@@ -149,7 +148,17 @@ class NumberField(Field):
 
 
 class DateField(Field):
-    pass
+    _type = datetime.datetime
+
+    def __get__(self, obj, objtype):
+        return super(DateField, self).__get__(obj, objtype).isoformat()
+
+    def __set__(self, obj, val):
+        try:
+            value = val if isinstance(val, datetime.datetime) else dateutil.parser.parse(val)
+            super(DateField, self).__set__(obj, value)
+        except (ValueError, AttributeError):
+            raise ValidationError(self.name, val, self._type)
 
 
 class EnumField(Field):

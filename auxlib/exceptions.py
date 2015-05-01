@@ -1,19 +1,23 @@
 from enum import Enum
 
 
-class NotFoundError(LookupError):
+class AuxlibError(object):
+    """Mixin to identify all exceptions associated with the auxlib package."""
+
+
+class NotFoundError(AuxlibError, LookupError):
     pass
 
 
-class InitializationError(EnvironmentError):
+class InitializationError(AuxlibError, EnvironmentError):
     pass
 
 
-class SenderError(IOError):
+class SenderError(AuxlibError, IOError):
     pass
 
 
-class ValidationError(TypeError):
+class ValidationError(AuxlibError, TypeError):
 
     def __init__(self, key, value=None, valid_types=None):
         if valid_types is None:

@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
+import datetime
+import dateutil.parser
 from enum import Enum
 
 from testtools import TestCase, ExpectedException
 
 from auxlib.exceptions import ValidationError
 
-from auxlib.entity import Entity, StringField, IntField, EnumField, Field
+from auxlib.entity import Entity, StringField, IntField, EnumField, Field, DateField
 
 
 class Color(Enum):
@@ -78,11 +80,6 @@ class EntityTests(TestCase):
         self.assertEqual('baboon', se2.string_field)
         self.assertEqual(14, se2.integer_field)
 
-
-# class FieldTests(TestCase):
-#
-#     def test_cant_instantiate_field(self):
-#         f = Field()
 
 class EnumEntity(Entity):
     enum_field = EnumField(Color)
@@ -216,17 +213,19 @@ class StringFieldTests(TestCase):
         sf = StringEntity(field="maple", field_w_validation="oak")
         assert sf.field == "maple"
         assert sf.field_w_default_wo_required == "elm"
-        assert sf.field_wo_default_wo_required is None
+        with ExpectedException(AttributeError):
+            sf.field_wo_default_wo_required
 
         with ExpectedException(ValidationError):
-            sf.enum_field = None
+            sf.field = None
         sf.field_w_default_wo_required = None
         sf.field_wo_default_wo_required = "birch"
         assert sf.field_w_default_wo_required == "elm"
         assert sf.field_wo_default_wo_required == "birch"
 
         sf.field_wo_default_wo_required = None
-        assert sf.field_wo_default_wo_required is None
+        with ExpectedException(AttributeError):
+            sf.field_wo_default_wo_required
 
 
     def test_assignment(self):
@@ -252,8 +251,8 @@ class StringFieldTests(TestCase):
         assert sf.field_w_default_w_validation == "coconut"
         assert sf.field_wo_dump == "pineapple"
 
-        with ExpectedException(ValidationError):
-            sf.field_w_default_wo_required = None
+        sf.field_w_default_wo_required = None  # clear the set value and override with default
+        assert sf.field_w_default_wo_required == "elm"
 
         with ExpectedException(ValidationError):
             sf.field_w_validation = "coconut"
@@ -286,3 +285,66 @@ class StringFieldTests(TestCase):
         assert d.pop('field_w_validation') == u"öak"
         assert d.pop('field_w_default_w_validation') == "redwood"
         assert len(d) == 0
+
+    def test_invalidatable(self):
+        with ExpectedException(ValidationError):
+            class StringEntity2(Entity):
+                bad_field_default = StringField("redwood", validation=lambda v: len(v) < 3)
+            se2 = StringEntity2()
+
+
+NOW = datetime.datetime.now()
+
+class DateEntity(Entity):
+    field = DateField()
+    field_w_default = DateField(NOW)
+    field_w_default_w_validation = DateField(NOW, validation=lambda v: v >= NOW)
+
+
+class DateFieldTests(TestCase):
+
+    def test_assignment(self):
+        df = DateEntity(field=NOW.isoformat())
+        assert df.field == NOW.isoformat()
+        assert df.field_w_default == NOW.isoformat()
+        assert df.field_w_default_w_validation == NOW.isoformat()
+
+        new_now = datetime.datetime.now()
+        df.field = new_now
+        df.field_w_default = new_now
+        df.field_w_default_w_validation = new_now
+
+        assert df.field == new_now.isoformat()
+        assert df.field_w_default == new_now.isoformat()
+        assert df.field_w_default_w_validation == new_now.isoformat()
+
+        now_now = datetime.datetime.now()
+        df.field = now_now
+        df.field_w_default = now_now
+        df.field_w_default_w_validation = now_now
+
+        assert df.field == now_now.isoformat()
+        assert df.field_w_default == now_now.isoformat()
+        assert df.field_w_default_w_validation == now_now.isoformat()
+
+    def test_assignment_error(self):
+        df = DateEntity(field=NOW.isoformat())
+        with ExpectedException(ValidationError):
+            df.field_w_default_w_validation = dateutil.parser.parse('2014')
+
+        with ExpectedException(ValidationError):
+            DateEntity(field=NOW.isoformat(),
+                       field_w_default_w_validation=dateutil.parser.parse('2014').isoformat())
+
+        with ExpectedException(ValidationError):
+            DateEntity(field='not parseable as a date')
+
+        with ExpectedException(ValidationError):
+            DateEntity(field=15)
+
+
+
+
+
+
+

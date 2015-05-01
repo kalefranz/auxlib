@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
 from setuptools import setup, find_packages
+
 import os
+import re
 import sys
 
 import auxlib
@@ -11,9 +12,6 @@ from auxlib import packaging
 name = "auxlib"
 long_description = """
 """
-
-
-import re
 
 here = os.path.abspath(os.path.dirname(__file__))
 PY3 = sys.version_info[0] == 3

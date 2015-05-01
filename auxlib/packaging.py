@@ -4,9 +4,6 @@ import logging
 import os
 import re
 import subprocess
-import pkg_resources
-
-import auxlib
 
 log = logging.getLogger(__name__)
 

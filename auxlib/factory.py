@@ -3,7 +3,6 @@ for various types of data gateways.
 """
 from auxlib.exceptions import InitializationError
 
-
 __all__ = ['Factory']
 
 
