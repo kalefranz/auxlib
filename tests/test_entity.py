@@ -294,10 +294,12 @@ class StringFieldTests(TestCase):
 
 
 NOW = datetime.datetime.now()
+NOW_CALLABLE = datetime.datetime.now
 
 class DateEntity(Entity):
     field = DateField()
     field_w_default = DateField(NOW)
+    field_w_default_callable = DateField(NOW_CALLABLE)
     field_w_default_w_validation = DateField(NOW, validation=lambda v: v >= NOW)
 
 
@@ -342,7 +344,9 @@ class DateFieldTests(TestCase):
         with ExpectedException(ValidationError):
             DateEntity(field=15)
 
-
+    def test_callable_values(self):
+        de = DateEntity(field=NOW_CALLABLE)
+        assert isinstance(de.field, basestring)
 
 
 

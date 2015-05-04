@@ -20,6 +20,7 @@ import site
 import yaml
 
 from auxlib.decorators import memoize, memoizemethod
+from auxlib.exceptions import AssignmentError
 from auxlib.type_coercion import typify
 
 
@@ -38,7 +39,6 @@ def reverse_env_key(app_name, key):
     app = app_name.upper() + '_'
     assert key.startswith(app), "{} is not a(n) {} environment key".format(key, app)
     return key[len(app):].lower()
-
 
 
 def get_site_packages_paths():
@@ -71,8 +71,6 @@ def find_config_file(config_file, package_name):
                   "".format(package_name, config_file))
 
 
-
-
 class Configuration(object):
     """A specialized map implementation to manage configuration and context information. Values
     can be accessed (read, not assigned) as either a dict lookup (e.g. `config[key]`)are as an
@@ -89,13 +87,13 @@ class Configuration(object):
 
     Args:
         app_name (str)
-        config_file (str, optional)
+        config_sources (str or list, optional)
         required_parameters (iter, optional)
 
     Raises:
-        EnvironmentError: on instantiation, when `required_parameters` are not found
-        IOError: on instantiation, when a given `config_file` cannot be read
-        KeyError: when requesting a key that does not exist
+        InitializationError: on instantiation, when `required_parameters` are not found
+        warns: on instantiation, when a given `config_file` cannot be read
+        NotFoundError: when requesting a key that does not exist
 
     Examples:
         >>> for (key, value) in [('FOO_BAR', 22), ('FOO_BAZ', 'yes'), ('FOO_BANG', 'monkey')]:
@@ -118,7 +116,7 @@ class Configuration(object):
 
     """
 
-    def __init__(self, app_name, config_file=None, required_parameters=None, package_name=None):
+    def __init__(self, app_name, config_file=None, required_parameters=None, package_name=__package__):
         self._config_map = dict()
         self._registered_env_keys = set()
 
@@ -127,6 +125,10 @@ class Configuration(object):
 
         self.__config_file = config_file
         self.__package_name = package_name
+        self.package_name = package_name
+
+        # now lock instance object to not allow further assignment
+        self.__setattr__ = self.__lock_assignment
 
         self.reload()
 
@@ -156,7 +158,7 @@ class Configuration(object):
 
     @memoizemethod  # memoized for performance; always use self.set_env() instead of os.setenv()
     def __getitem__(self, key):
-        # This method is complicated by the fact that None is a valid python-yaml type.
+        # This method is complicated by the fact that `None` is a valid python-yaml type.
         key_in_file = key in self._config_map
         from_file = self._config_map.get(key, None)
 
@@ -177,6 +179,12 @@ class Configuration(object):
             return self[key]
         except KeyError:
             return default
+
+    def __setitem__(self, key, value):
+        raise AssignmentError()
+
+    def __lock_assignment(self, key, value):
+        raise AssignmentError()
 
     def __iter__(self):
         for key in self._registered_env_keys | set(self._config_map.keys()):
@@ -246,3 +254,6 @@ class Configuration(object):
 
     def _clear_memoization(self):
         self.__dict__.pop('_memoized_results', None)
+
+
+A = Configuration('app')

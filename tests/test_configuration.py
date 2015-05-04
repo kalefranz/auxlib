@@ -4,7 +4,7 @@ from ddt import ddt, unpack, data
 from testtools import TestCase, ExpectedException
 
 from auxlib.type_coercion import typify
-from auxlib.configuration import make_env_key, Configuration, reverse_env_key
+from auxlib.configuration import make_env_key, Configuration, reverse_env_key, A
 
 APP_NAME = 'test'
 data_document = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'sample_config.yml')

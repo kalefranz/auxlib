@@ -42,7 +42,7 @@ class Field(object):
 
     Arguments:
         types_ (primitive literal or type or sequence of types):
-        default (any, optional):
+        default (any, callable, optional):
         required (boolean, optional):
         validation (callable, optional):
         dump (boolean, optional):
@@ -80,6 +80,10 @@ class Field(object):
                 raise AttributeError("A value for {} has not been set".format(self.name))
 
     def __set__(self, obj, val):
+        if callable(val):
+            val = val()
+        # validate will raise an exception if invalid
+        # validate will return False if the value should be removed
         if self.validate(val):
             obj.__dict__[self.name] = val
         else:
@@ -120,7 +124,7 @@ class Field(object):
 
     @property
     def default(self):
-        return self._default
+        return self._default() if callable(self._default) else self._default
 
     @property
     def in_dump(self):
@@ -155,6 +159,7 @@ class DateField(Field):
 
     def __set__(self, obj, val):
         try:
+            val = val() if callable(val) else val
             value = val if isinstance(val, datetime.datetime) else dateutil.parser.parse(val)
             super(DateField, self).__set__(obj, value)
         except (ValueError, AttributeError):

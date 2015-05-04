@@ -5,7 +5,7 @@ class AuxlibError(object):
     """Mixin to identify all exceptions associated with the auxlib package."""
 
 
-class NotFoundError(AuxlibError, LookupError):
+class NotFoundError(AuxlibError, KeyError):
     pass
 
 
@@ -14,6 +14,10 @@ class InitializationError(AuxlibError, EnvironmentError):
 
 
 class SenderError(AuxlibError, IOError):
+    pass
+
+
+class AssignmentError(AuxlibError, AttributeError):
     pass
 
 
