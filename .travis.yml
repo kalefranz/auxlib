@@ -24,4 +24,4 @@ script:
   - tox
 
 after_success:
-  - coveralls
+  - .tox/$TOXENV/bin/coveralls
