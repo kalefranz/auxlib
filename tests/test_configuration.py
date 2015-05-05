@@ -12,7 +12,6 @@ data_document = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'sampl
 
 
 yaml_source = YamlSource(location=data_document,
-                         package_name='auxlib',
                          provides=['new_param', 'foo', 'nonetype', 'bool1', 'bool2', 'bool3'])
 
 

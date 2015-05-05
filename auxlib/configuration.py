@@ -11,18 +11,13 @@ Features:
   * Can query information from consul
 
 """
-from contextlib import closing
 import logging
 import os
-import pkg_resources
-import site
-import sys
 
-import yaml
 from auxlib.collection import listify
-
 from auxlib.decorators import memoize, memoizemethod
-from auxlib.exceptions import AssignmentError, NotFoundError
+from auxlib.exceptions import AssignmentError
+from auxlib.path import PackageFile
 from auxlib.type_coercion import typify
 
 
@@ -41,36 +36,6 @@ def reverse_env_key(app_name, key):
     app = app_name.upper() + '_'
     assert key.startswith(app), "{} is not a(n) {} environment key".format(key, app)
     return key[len(app):].lower()
-
-
-def get_site_packages_paths():
-    if hasattr(sys,'real_prefix'):
-        # in a virtualenv
-        return [p for p in sys.path if p.endswith('site-packages')]
-    else:
-        # not in a virtualenv
-        return site.getsitepackages()
-
-
-def find_config_file(config_file, package_name):
-    config_file = os.path.normpath(os.path.expandvars(os.path.expanduser(config_file)))
-
-    if os.path.exists(config_file):
-        return open(config_file)
-
-    if pkg_resources.resource_exists(package_name, config_file):
-        return pkg_resources.resource_stream(package_name, config_file)
-
-    package_path = package_name.replace('.', '/')
-    for site_packages_path in get_site_packages_paths():
-        test_path = os.path.join(site_packages_path, package_path, config_file)
-        if os.path.exists(test_path):
-            return open(test_path)
-
-    log.error("config file for module [{}] cannot be found at path [{}]"
-              "".format(package_name, config_file))
-    raise IOError("config file for module [{}] cannot be found at path [{}]"
-                  "".format(package_name, config_file))
 
 
 class Configuration(object):
@@ -217,24 +182,25 @@ class Source(object):
     def provides(self):
         return self._provides
 
-    def reload(self):
+    def load(self):
         raise NotImplementedError()
 
     def dump(self, force_reload=False):
         if self._items is None or force_reload:
-            self.reload()
+            self.load()
         return self._items
 
 
 class YamlSource(Source):
 
-    def __init__(self, location, package_name, provides):
+    def __init__(self, location, provides, package_name=None):
         self._location = location
         self._package_name = package_name
         self._provides = provides
 
-    def reload(self):
-        with closing(find_config_file(self._location, self._package_name)) as fh:
+    def load(self):
+        with PackageFile(self._location, self._package_name) as fh:
+            import yaml
             contents = yaml.load(fh)
             self._items = {key: contents[key] for key in self.provides}
 
