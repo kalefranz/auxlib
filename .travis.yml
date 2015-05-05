@@ -1,23 +1,19 @@
 language: python
-
 python: 2.7
-
 env:
-  global:
-    TRAVISCI_ENABLED=1
   matrix:
     - TOXENV=py27
     - TOXENV=pypy
 
 before_install:
-  - |
-    python --version
-    printenv
-    uname -a
-    lsb_release -a
+  - python --version
+  - printenv
+  - uname -a
+  - lsb_release -a
 
 install:
   - pip install tox
+  - pip install coveralls
 
 script:
   - tox
