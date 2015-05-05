@@ -11,16 +11,18 @@ Features:
   * Can query information from consul
 
 """
+from contextlib import closing
 import logging
-import sys
-
 import os
 import pkg_resources
 import site
+import sys
+
 import yaml
+from auxlib.collection import listify
 
 from auxlib.decorators import memoize, memoizemethod
-from auxlib.exceptions import AssignmentError
+from auxlib.exceptions import AssignmentError, NotFoundError
 from auxlib.type_coercion import typify
 
 
@@ -116,19 +118,13 @@ class Configuration(object):
 
     """
 
-    def __init__(self, app_name, config_file=None, required_parameters=None, package_name=__package__):
-        self._config_map = dict()
-        self._registered_env_keys = set()
+    def __init__(self, app_name, config_sources=None, required_parameters=None):
+        self._config_map = None
+        self._registered_env_keys = None
 
         self.app_name = app_name
-        self._required_keys = set(required_parameters if required_parameters is not None else [])
-
-        self.__config_file = config_file
-        self.__package_name = package_name
-        self.package_name = package_name
-
-        # now lock instance object to not allow further assignment
-        self.__setattr__ = self.__lock_assignment
+        self._required_keys = set(listify(required_parameters))
+        self.__sources = listify(config_sources)
 
         self.reload()
 
@@ -147,29 +143,25 @@ class Configuration(object):
         self._registered_env_keys.discard(key)
         self._clear_memoization()
 
-    def reload(self):
+    def reload(self, force=False):
         """Reloads the configuration from the file and environment variables. Useful if using
         `os.environ` instead of this class' `set_env` method, or if the underlying configuration
         file is changed externally.
         """
-        self.__load_config_file()
+        self._config_map = dict()
+        self.__load_sources()
         self.__load_environment_keys()
         self.__ensure_required_keys()
+        self._clear_memoization()
 
     @memoizemethod  # memoized for performance; always use self.set_env() instead of os.setenv()
     def __getitem__(self, key):
-        # This method is complicated by the fact that `None` is a valid python-yaml type.
-        key_in_file = key in self._config_map
-        from_file = self._config_map.get(key, None)
-
-        from_env = os.getenv(make_env_key(self.app_name, key), None)
-        if from_env is not None:
-            # give type hint from type in config file if possible
-            return typify(from_env, type(from_file) if key_in_file else None)
-        elif key_in_file:
-            return from_file
+        if key in self._registered_env_keys:
+            from_env = os.getenv(make_env_key(self.app_name, key))
+            from_sources = self._config_map.get(key, None)
+            return typify(from_env, type(from_sources) if from_sources is not None else None)
         else:
-            raise KeyError("Key [{}] not found in configuration.".format(key))
+            return self._config_map[key]
 
     def __getattr__(self, key):
         return self[key]
@@ -183,9 +175,6 @@ class Configuration(object):
     def __setitem__(self, key, value):
         raise AssignmentError()
 
-    def __lock_assignment(self, key, value):
-        raise AssignmentError()
-
     def __iter__(self):
         for key in self._registered_env_keys | set(self._config_map.keys()):
             yield key
@@ -194,46 +183,9 @@ class Configuration(object):
         for key in self:
             yield key, self[key]
 
-    # def _attach_config_file(self, config_file):
-    #     if config_file is not None:
-    #         try:
-    #             self.__config_file_type = config_type = ('absolute_path'
-    #                                                      if config_file.startswith('/')
-    #                                                      else 'pkg_resource')
-    #             self.__config_file = os.path.expandvars(os.path.expanduser(config_file))
-    #             if config_type == 'absolute_path':
-    #                 if not os.path.exists(self.__config_file):
-    #                     raise IOError()
-    #             if config_type == 'pkg_resource':
-    #                 if not pkg_resources.resource_exists('ttam.transcomm', self.__config_file):
-    #                     raise IOError()
-    #         except IOError:
-    #             log.error("config file type [{}] cannot be found at path [{}]"
-    #                       "".format(self.__config_file_type, self.__config_file))
-    #             raise IOError("config file type [{}] cannot be found at path [{}]"
-    #                           "".format(self.__config_file_type, self.__config_file))
-    #         except AttributeError:
-    #             raise IOError("config_file not found or must be a file path <type 'str'>.\n"
-    #                           "   Found {} instead.".format(config_file))
-
-    def __load_config_file(self):
-        if self.__config_file is None:
-            return
-        self._config_map = dict()
-        file_handle = find_config_file(self.__config_file, self.__package_name)
-        self._config_map.update(yaml.load(file_handle))
-        self._clear_memoization()
-        file_handle.close()
-
-        # if self.__config_file_type == 'pkg_resource':
-        #     conf_file = pkg_resources.resource_stream('ttam.transcomm', self.__config_file)
-        #     self._config_map.update(yaml.load(conf_file))
-        #     self._clear_memoization()
-        #     conf_file.close()
-        # else:
-        #     with open(self.__config_file, 'r') as conf_file:
-        #         self._config_map.update(yaml.load(conf_file))
-        #         self._clear_memoization()
+    def __load_sources(self):
+        for source in self.__sources:
+            self._config_map.update(source.dump())
 
     def __load_environment_keys(self):
         self._registered_env_keys = set()
@@ -241,19 +193,48 @@ class Configuration(object):
         for env_key in os.environ:
             if env_key.startswith(app_prefix):
                 self._registered_env_keys.add(reverse_env_key(self.app_name, env_key))
-        self._clear_memoization()
+                # We don't actually add values to _config_map here. Rather, they're pulled
+                # directly from os.environ at __getitem__ time. This allows for type casting
+                # environment variables if possible.
 
     def __ensure_required_keys(self):
         available_keys = self._registered_env_keys | set(self._config_map.keys())
         missing_keys = self._required_keys - available_keys
         if missing_keys:
             raise EnvironmentError("Required key(s) not found in environment\n"
-                                   "  or configuration file [{0}].\n"
-                                   "  Missing Keys: {1}".format(self.__config_file,
-                                                                list(missing_keys)))
+                                   "  or configuration sources.\n"
+                                   "  Missing Keys: {}".format(list(missing_keys)))
 
     def _clear_memoization(self):
         self.__dict__.pop('_memoized_results', None)
 
 
-A = Configuration('app')
+class Source(object):
+    _items = None
+    _provides = None
+
+    @property
+    def provides(self):
+        return self._provides
+
+    def reload(self):
+        raise NotImplementedError()
+
+    def dump(self, force_reload=False):
+        if self._items is None or force_reload:
+            self.reload()
+        return self._items
+
+
+class YamlSource(Source):
+
+    def __init__(self, location, package_name, provides):
+        self._location = location
+        self._package_name = package_name
+        self._provides = provides
+
+    def reload(self):
+        with closing(find_config_file(self._location, self._package_name)) as fh:
+            contents = yaml.load(fh)
+            self._items = {key: contents[key] for key in self.provides}
+

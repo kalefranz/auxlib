@@ -2,12 +2,18 @@ import os
 
 from ddt import ddt, unpack, data
 from testtools import TestCase, ExpectedException
+from auxlib.exceptions import AssignmentError
 
 from auxlib.type_coercion import typify
-from auxlib.configuration import make_env_key, Configuration, reverse_env_key, A
+from auxlib.configuration import make_env_key, Configuration, reverse_env_key, YamlSource
 
 APP_NAME = 'test'
 data_document = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'sample_config.yml')
+
+
+yaml_source = YamlSource(location=data_document,
+                         package_name='auxlib',
+                         provides=['new_param', 'foo', 'nonetype', 'bool1', 'bool2', 'bool3'])
 
 
 @ddt
@@ -51,9 +57,9 @@ class BasicConfigTests(TestCase):
         os.environ[make_env_key(APP_NAME, 'zero')] = '0'
         os.environ[make_env_key(APP_NAME, 'an_int')] = '55'
         os.environ[make_env_key(APP_NAME, 'a_float')] = '55.555'
-        os.environ[make_env_key(APP_NAME, 'a_None')] = 'none'
+        os.environ[make_env_key(APP_NAME, 'a_none')] = 'none'
         os.environ[make_env_key(APP_NAME, 'just_a_string')] = 'what say you'
-        self.config = Configuration(APP_NAME, data_document)
+        self.config = Configuration(APP_NAME, yaml_source)
 
     @unpack
     @data(('new_param', 42), ('foo', 'bar'), ('nonetype', None), ('bool1', True),
@@ -63,7 +69,7 @@ class BasicConfigTests(TestCase):
         self.assertEqual(type(value), type(self.config[config_name]))
 
     @unpack
-    @data(('foobaz', False), ('zero', 0), ('an_int', 55), ('a_float', 55.555), ('a_None', None),
+    @data(('foobaz', False), ('zero', 0), ('an_int', 55), ('a_float', 55.555), ('a_none', None),
           ('just_a_string', 'what say you'))
     def test_load_env_vars(self, config_name, value):
         self.assertEqual(value, self.config[config_name])
@@ -111,16 +117,18 @@ class BasicConfigTests(TestCase):
 
     def test_ensure_required_keys(self):
         required_keys = ('bool1', 'nonetype', )
-        self.config = Configuration(APP_NAME, data_document, required_keys)
+        self.config = Configuration(APP_NAME, yaml_source, required_keys)
         required_keys += ('doesnt_exist', )
-        self.assertRaises(EnvironmentError, Configuration, APP_NAME, data_document, required_keys)
+        self.assertRaises(EnvironmentError, Configuration, APP_NAME, yaml_source, required_keys)
         os.environ[make_env_key(APP_NAME, 'doesnt_exist')] = 'now it does'
-        self.config = Configuration(APP_NAME, data_document, required_keys)
+        self.config = Configuration(APP_NAME, yaml_source, required_keys)
         self.assertEqual('now it does', self.config.doesnt_exist)
 
     def test_items(self):
         self.assertTrue({('a_none', None), ('bool1', True)}.issubset(set(self.config.items())))
 
-    # def test_attach_config_file_io_errors(self):
-    #     self.assertRaises(IOError, Configuration, 'foo', '/tmp/file_that_doesnt_exist_54321')
-    #     self.assertRaises(IOError, Configuration, 'foo', 54321)
+    def test_assignment_lock(self):
+        with ExpectedException(AssignmentError):
+            self.config['bool2'] = 'false'
+
+

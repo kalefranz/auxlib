@@ -1,6 +1,8 @@
 from functools import wraps
 import types
 
+# TODO: spend time filling out functionality and make these more robust
+
 
 def memoize(func):
     """

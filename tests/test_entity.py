@@ -348,7 +348,3 @@ class DateFieldTests(TestCase):
         de = DateEntity(field=NOW_CALLABLE)
         assert isinstance(de.field, basestring)
 
-
-
-
-

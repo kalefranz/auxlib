@@ -1,4 +1,5 @@
 """Common collection classes."""
+import collections
 
 
 # http://stackoverflow.com/a/14620633/2127762
@@ -16,3 +17,14 @@ class AttrDict(dict):
     def __init__(self, *args, **kwargs):
         super(AttrDict, self).__init__(*args, **kwargs)
         self.__dict__ = self
+
+
+def listify(val):
+    if val is None:
+        return []
+    elif isinstance(val, basestring):
+        return [val]
+    elif isinstance(val, collections.Iterable):
+        return list(val)
+    else:
+        return [val]
