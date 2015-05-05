@@ -105,15 +105,6 @@ class BasicConfigTests(TestCase):
         self.config.unset_env('a_float')
         self.assertFalse('a_float' in self.config)
 
-    # def test_reload(self):
-    #     self.assertEqual('bar', self.config.foo)
-    #     new_config = os.path.join(os.path.dirname(data_document), 'sample_config_2.yml')
-    #     self.config._attach_config_file(new_config)
-    #     self.config.reload()
-    #     with super(TestCase, self).assertRaises(KeyError):
-    #         self.config.foo
-    #     self.assertEquals('key', self.config.just_one)
-
     def test_ensure_required_keys(self):
         required_keys = ('bool1', 'nonetype', )
         self.config = Configuration(APP_NAME, yaml_source, required_keys)
