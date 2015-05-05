@@ -78,7 +78,7 @@ class Configuration(object):
         Traceback (most recent call last):
         ...
         EnvironmentError: Required key(s) not found in environment
-          or configuration file [None].
+          or configuration sources.
           Missing Keys: ['boink']
 
     """

@@ -19,9 +19,9 @@ Examples:
     >>> truck.wheels
     18
     >>> truck.color
-    'blue'
+    0
     >>> sorted(truck.dump().items())
-    [('color', 'blue'), ('weight', 44.4)]
+    [('color', 0), ('weight', 44.4)]
 
 """
 import datetime
