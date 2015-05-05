@@ -20,6 +20,17 @@ class AttrDict(dict):
 
 
 def listify(val):
+    """
+    Examples:
+        >>> listify('abc')
+        ['abc']
+        >>> listify(None)
+        []
+        >>> listify(False)
+        [False]
+        >>> listify(('a', 'b', 'c'))
+        ['a', 'b', 'c']
+    """
     if val is None:
         return []
     elif isinstance(val, basestring):

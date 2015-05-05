@@ -183,7 +183,7 @@ class Source(object):
         return self._provides
 
     def load(self):
-        raise NotImplementedError()
+        raise NotImplementedError()  # pragma: no cover
 
     def dump(self, force_reload=False):
         if self._items is None or force_reload:
