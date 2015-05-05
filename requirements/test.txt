@@ -3,3 +3,4 @@ pytest-cov
 ddt
 testtools
 radon
+xenon
