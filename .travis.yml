@@ -24,4 +24,4 @@ script:
   - tox
 
 after_success:
-  - .tox/$TRAVIS_PYTHON_VERSION/bin/coveralls
+  - coveralls
