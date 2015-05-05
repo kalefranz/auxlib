@@ -1,6 +1,8 @@
 language: python
 python: 2.7
 env:
+  global:
+    - PIP_DOWNLOAD_CACHE=$HOME/.pip-cache
   matrix:
     - TOXENV=py27
     - TOXENV=pypy
@@ -11,9 +13,11 @@ before_install:
   - uname -a
   - lsb_release -a
 
+cache:
+  - $HOME/.pip-cache
+
 install:
   - pip install tox
-  - pip install coveralls
 
 script:
   - tox

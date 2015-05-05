@@ -1,6 +1,5 @@
 """Collection of functions to coerce conversion of types with an intelligent guess."""
 import re
-from types import StringTypes
 
 from auxlib.decorators import memoize
 
@@ -84,16 +83,13 @@ def typify(value, type_hint=None):
 
     """
     # value must be a string, or there at least needs to be a type hint
-    if not isinstance(value, StringTypes) and type_hint is None:
+    if isinstance(value, basestring):
+        value = value.strip()
+    elif type_hint is None:
+        # can't do anything because value isn't a string and there' no type hint
         return value
 
-    # value is now a string type; prepare by stripping white space
-    try:
-        value = value.strip()
-    except AttributeError:
-        # value actually *isn't* a string type, but there's a type hint, so it's ok
-        pass
-
+    # now we either have a stripped string, a type hint, or both
     # use the hint if it exists
     if type_hint is not None:
         return boolify(value) if type_hint == bool else type_hint(value)
