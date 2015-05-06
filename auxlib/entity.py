@@ -246,10 +246,10 @@ class Entity(object):
         for key in self.__fields__:
             if key in kwargs:
                 setattr(self, key, kwargs.get(key))
-            else:
-                field = self.__fields__.get(key)
-                if field.is_required:
-                    setattr(self, key, field.default)
+            # else:
+            #     field = self.__fields__.get(key)
+            #     if field.is_required:
+            #         setattr(self, key, field.default)
         self.validate()
 
     @classmethod
@@ -267,7 +267,12 @@ class Entity(object):
         return cls(**data_dict)
 
     def validate(self):
-        (getattr(self, name) for name, field in self.__fields__.items() if field.is_required)
+        try:
+            reduce(lambda x, y: y, (getattr(self, name)
+                                    for name, field in self.__fields__.items()
+                                    if field.is_required))
+        except AttributeError as e:
+            raise ValidationError(None, msg=e.message)
 
     def __repr__(self):
         _repr = lambda val: repr(val.value) if isinstance(val, Enum) else repr(val)

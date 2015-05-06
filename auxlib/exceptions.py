@@ -27,8 +27,10 @@ class AssignmentError(AuxlibError, AttributeError):
 
 class ValidationError(AuxlibError, TypeError):
 
-    def __init__(self, key, value=None, valid_types=None):
-        if valid_types is None:
+    def __init__(self, key, value=None, valid_types=None, msg=None):
+        if msg is not None:
+            super(ValidationError, self).__init__(msg)
+        elif valid_types is None:
             if value is None:
                 super(ValidationError, self).__init__("Missing or invalid parameter: "
                                                       "{}".format(key))
