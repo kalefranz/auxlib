@@ -1,6 +1,10 @@
 from enum import Enum
 
 
+def Raise(exception):
+    raise exception
+
+
 class AuxlibError(object):
     """Mixin to identify all exceptions associated with the auxlib package."""
 

@@ -7,7 +7,7 @@ from testtools import TestCase, ExpectedException
 
 from auxlib.exceptions import ValidationError
 
-from auxlib.entity import Entity, StringField, IntField, EnumField, Field, DateField
+from auxlib.entity import Entity, StringField, IntField, EnumField, ListField, DateField
 
 
 class Color(Enum):
@@ -79,6 +79,66 @@ class EntityTests(TestCase):
         se2 = SampleEntity.create_from_objects(blank, se, string_field='baboon')
         self.assertEqual('baboon', se2.string_field)
         self.assertEqual(14, se2.integer_field)
+
+    def test_load_entity_from_dict(self):
+        se = SampleEntity(string_field='bazaar', integer_field=28, enum_field=ChooseOne.B)
+        d = se.dump()
+        assert d.pop('string_field') == 'bazaar'
+        assert d.pop('integer_field') == 28
+        assert d.pop('enum_field') == 'b'
+        assert d.pop('string_field_w_default') == 'default'
+        assert d.pop('integer_field_w_default') == 42
+        assert d.pop('enum_field_w_default') == 'b'
+
+        assert len(d) == 0
+
+        se2 = SampleEntity.load(se.dump())
+
+        assert se is not se2
+        assert se.string_field == se2.string_field
+        assert se.string_field_w_default == se2.string_field_w_default
+        assert se.integer_field == se2.integer_field
+        assert se.integer_field_w_default == se2.integer_field_w_default
+        assert se.enum_field == se2.enum_field
+        assert se.enum_field_w_default == se2.enum_field_w_default
+
+        se2.integer_field = 4
+
+        assert se.integer_field != se2.integer_field
+
+    def test_entity_eq_and_hash(self):
+        se1 = SampleEntity(string_field='s1', integer_field=82, enum_field=ChooseOne.C)
+        se2 = SampleEntity(string_field='s1', integer_field=82, enum_field=ChooseOne.C)
+        se3 = SampleEntity(string_field='s', integer_field=82, enum_field=ChooseOne.C)
+
+        assert se1 is not se2
+        assert se1 == se2
+        assert hash(se1) == hash(se2)
+
+        assert se1 != se3
+        assert hash(se1) != hash(se3)
+
+    def test_entity_not_eq_and_hash(self):
+        se1 = SampleEntity(string_field='s1', integer_field=82, enum_field=ChooseOne.C)
+        de1 = DerivedSampleEntity(18, string_field_w_default='taxi', string_field='boo',
+                                  integer_field=14, enum_field=ChooseOne.C)
+        assert se1 != de1
+        assert hash(se1) != hash(de1)
+
+
+
+class MiscFieldTests(TestCase):
+
+    def test_unassigned_name_throws_error(self):
+        field = IntField()
+        with ExpectedException(AttributeError):
+            field.name
+
+        class Clazz(object):
+            int_field = IntField()
+        clazz = Clazz()
+        with ExpectedException(AttributeError):
+            clazz.int_field
 
 
 class EnumEntity(Entity):
@@ -348,3 +408,27 @@ class DateFieldTests(TestCase):
         de = DateEntity(field=NOW_CALLABLE)
         assert isinstance(de.field, basestring)
 
+
+class ListEntity(Entity):
+    field = ListField(basestring)
+    field_w_default = ListField((int, long), default=[42, 43])
+
+
+class ListFieldTests(TestCase):
+
+    def test_assignment(self):
+        le = ListEntity(field=['abc', 'def'])
+        assert le.field == tuple(['abc', 'def'])
+        assert le.field_w_default == tuple([42, 43])
+
+        le.field = ['ghi', u'jkl', 'mno']
+        le.field_w_default = [81, 82, 83, 84]
+
+        assert le.field == tuple(['ghi', u'jkl', 'mno'])
+        assert le.field_w_default == tuple([81, 82, 83, 84])
+
+        with ExpectedException(ValidationError):
+            le.field = ['ghi', 10, 'mno']
+
+        with ExpectedException(ValidationError):
+            le.field_w_default = [81, 84.4, 10]

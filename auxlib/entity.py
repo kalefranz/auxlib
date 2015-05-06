@@ -29,7 +29,7 @@ import logging
 
 import dateutil.parser
 from enum import Enum
-from auxlib.exceptions import ValidationError
+from auxlib.exceptions import ValidationError, Raise
 
 from auxlib.collection import AttrDict
 
@@ -130,14 +130,6 @@ class Field(object):
     def in_dump(self):
         return self._in_dump
 
-    def __repr__(self):
-        inputs = [str(self._type)]
-        if not self._required:
-            inputs.append("required={}".format(self._required))
-        if self._default is not None:
-            inputs.append("default={}".format(self._default))
-        return "{}({})".format(self.__class__.__name__, ", ".join(inputs))
-
 
 class IntField(Field):
     _type = (int, long)
@@ -159,9 +151,9 @@ class DateField(Field):
 
     def __set__(self, obj, val):
         try:
-            val = val() if callable(val) else val
-            value = val if isinstance(val, datetime.datetime) else dateutil.parser.parse(val)
-            super(DateField, self).__set__(obj, value)
+            if isinstance(val, basestring):
+                val = dateutil.parser.parse(val)
+            super(DateField, self).__set__(obj, val)
         except (ValueError, AttributeError):
             raise ValidationError(self.name, val, self._type)
 
@@ -182,6 +174,20 @@ class EnumField(Field):
         except ValueError:
             raise ValidationError(self.name, val, self._type)
 
+
+class ListField(Field):
+    _type = tuple
+
+    def __init__(self, element_type, *args, **kwargs):
+        self._element_type = element_type
+        super(ListField, self).__init__(*args, **kwargs)
+
+    def __set__(self, obj, val):
+        et = self._element_type
+        type_check = lambda el: (el if isinstance(el, et)
+                                 else Raise(ValidationError(self.name, el, et)))
+        liszt = tuple([type_check(element) for element in val])
+        super(ListField, self).__set__(obj, liszt)
 
 
 class EntityType(type):
@@ -264,7 +270,7 @@ class Entity(object):
         return all(getattr(self, field) == getattr(other, field) for field in self.__fields__)
 
     def __hash__(self):
-        return sum(hash(getattr(self, field)) for field in self.__fields__)
+        return sum(hash(getattr(self, field, None)) for field in self.__fields__)
 
 
 def find_or_none(key, search_maps, map_index=0):
