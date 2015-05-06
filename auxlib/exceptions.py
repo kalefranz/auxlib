@@ -31,17 +31,8 @@ class ValidationError(AuxlibError, TypeError):
         if msg is not None:
             super(ValidationError, self).__init__(msg)
         elif valid_types is None:
-            if value is None:
-                super(ValidationError, self).__init__("Missing or invalid parameter: "
-                                                      "{}".format(key))
-            else:
-                super(ValidationError, self).__init__("Invalid value for {}: {}"
-                                                      "".format(key, value))
+            super(ValidationError, self).__init__("Invalid value {} for {}"
+                                                  "".format(value, key))
         else:
-            if isinstance(valid_types, Enum):
-                super(ValidationError, self).__init__("Cannot set {0}. {1} is not a "
-                                                      "valid {2}."
-                                                      "".format(key, repr(value), valid_types))
-            else:
-                super(ValidationError, self).__init__("{0} must be of type {1}, not {2}"
-                                                      "".format(key, valid_types, repr(value)))
+            super(ValidationError, self).__init__("{0} must be of type {1}, not {2}"
+                                                  "".format(key, valid_types, repr(value)))

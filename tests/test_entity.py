@@ -122,6 +122,7 @@ class EntityTests(TestCase):
         se1 = SampleEntity(string_field='s1', integer_field=82, enum_field=ChooseOne.C)
         de1 = DerivedSampleEntity(18, string_field_w_default='taxi', string_field='boo',
                                   integer_field=14, enum_field=ChooseOne.C)
+        assert not se1 == de1
         assert se1 != de1
         assert hash(se1) != hash(de1)
 

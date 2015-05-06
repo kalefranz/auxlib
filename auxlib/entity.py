@@ -157,17 +157,12 @@ class DateField(Field):
 
     def __set__(self, obj, val):
         try:
-            if isinstance(val, basestring):
-                val = dateutil.parser.parse(val)
             super(DateField, self).__set__(obj, self._pre_convert(val))
         except (ValueError, AttributeError):
             raise ValidationError(self.name, val, self._type)
 
     def _pre_convert(self, val):
-        if isinstance(val, basestring):
-            return dateutil.parser.parse(val)
-        else:
-            return val
+        return dateutil.parser.parse(val) if isinstance(val, basestring) else val
 
 
 class EnumField(Field):
@@ -186,10 +181,7 @@ class EnumField(Field):
             raise ValidationError(self.name, val, self._type)
 
     def _pre_convert(self, val):
-        if val is not None and not isinstance(val, self._type):
-            return self._type(val)
-        else:
-            return val
+        return self._type(val) if val is not None and not isinstance(val, self._type) else val
 
 
 class ListField(Field):
@@ -202,20 +194,13 @@ class ListField(Field):
     def __set__(self, obj, val):
         super(ListField, self).__set__(obj, self._pre_convert(val))
 
-    # @property
-    # def default(self):
-    #     try:
-    #         return tuple(self._default)
-    #     except TypeError:
-    #         # TypeError: 'NoneType' object is not iterable
-    #         return None
-
     def _pre_convert(self, val):
         if val is None:
             return None
         else:
             et = self._element_type
-            return tuple(el if isinstance(el, et) else Raise(ValidationError(self.name, el, et))
+            return tuple(el if isinstance(el, et)
+                         else Raise(ValidationError(self.name, el, et))
                          for el in val)
 
 

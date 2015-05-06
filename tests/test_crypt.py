@@ -30,6 +30,12 @@ class TestBase64Encoding(TestCase):
         self.assertEqual(crypt.from_base64(test_str),
                          result_str.encode('UTF-8'))
 
+    def test_decode_unicode_unicode(self):
+        test_str = u"Tc65bm7OuWUgTW_PhXNl"
+        result_str= u"Mιnnιe Moυse"
+        self.assertEqual(crypt.from_base64(test_str),
+                         result_str.encode('UTF-8'))
+
     def test_encode_and_decode_unicode(self):
         test_str = u"Mickey & Miννie Μouse"
         self.assertEqual(crypt.from_base64(crypt.as_base64(test_str)),
