@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import logging
 import os
@@ -6,16 +5,17 @@ import pkg_resources
 import site
 import sys
 
-
 log = logging.getLogger(__name__)
 
 
 def site_packages_paths():
-    if hasattr(sys,'real_prefix'):
+    if hasattr(sys, 'real_prefix'):
         # in a virtualenv
+        log.debug('searching virtualenv')
         return [p for p in sys.path if p.endswith('site-packages')]
     else:
         # not in a virtualenv
+        log.debug('searching outside virtualenv')
         return site.getsitepackages()
 
 
@@ -38,10 +38,12 @@ def open_package_file(file_path, package_name):
 
     # look for file at relative path
     if os.path.exists(file_path):
+        log.info("found real file {}".format(file_path))
         return open(file_path)
 
     # look for file in package resources
     if package_name and pkg_resources.resource_exists(package_name, file_path):
+        log.info("found package resource file {} for package {}".format(file_path, package_name))
         return pkg_resources.resource_stream(package_name, file_path)
 
     # look for file in site-packages
@@ -49,8 +51,9 @@ def open_package_file(file_path, package_name):
     for site_packages_path in site_packages_paths():
         test_path = os.path.join(site_packages_path, package_path, file_path)
         if os.path.exists(test_path):
+            log.info("found site-package file {} for package {}".format(file_path, package_name))
             return open(test_path)
 
-    msg = "config file for module [{}] cannot be found at path {}".format(package_name, file_path)
+    msg = "file for module [{}] cannot be found at path {}".format(package_name, file_path)
     log.error(msg)
     raise IOError(msg)
