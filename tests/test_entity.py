@@ -126,7 +126,6 @@ class EntityTests(TestCase):
         assert hash(se1) != hash(de1)
 
 
-
 class MiscFieldTests(TestCase):
 
     def test_unassigned_name_throws_error(self):
@@ -139,6 +138,11 @@ class MiscFieldTests(TestCase):
         clazz = Clazz()
         with ExpectedException(AttributeError):
             clazz.int_field
+
+    def test_invalid_default(self):
+        with ExpectedException(ValidationError):
+            class Clazz(Entity):
+                int_field = IntField('18')
 
 
 class EnumEntity(Entity):
@@ -188,8 +192,8 @@ class EnumFieldTests(TestCase):
         assert ee.enum_field_w_xtra_validation == 2
         assert ee.enum_field_wo_dump == 'black'
 
-        with ExpectedException(ValidationError):
-            ee.enum_field_w_default_wo_required = None
+        ee.enum_field_w_default_wo_required = None
+        assert ee.enum_field_w_default_wo_required == 'green'
 
     def test_default(self):
         ee = EnumEntity(enum_field=Color.Red)
@@ -412,6 +416,7 @@ class DateFieldTests(TestCase):
 class ListEntity(Entity):
     field = ListField(basestring)
     field_w_default = ListField((int, long), default=[42, 43])
+    field_wo_required = ListField(float, required=False)
 
 
 class ListFieldTests(TestCase):
@@ -432,3 +437,20 @@ class ListFieldTests(TestCase):
 
         with ExpectedException(ValidationError):
             le.field_w_default = [81, 84.4, 10]
+
+    def test_assignment_wo_required(self):
+        le = ListEntity(field=['abc', 'def'])
+
+        assert not hasattr(le, 'field_wo_required')
+        with ExpectedException(AttributeError):
+            le.field_wo_required
+
+        le.field_wo_required = [33.3, 44.4]
+        assert le.field_wo_required == tuple([33.3, 44.4])
+
+        le.field_wo_required = None
+
+        assert not hasattr(le, 'field_wo_required')
+        with ExpectedException(AttributeError):
+            le.field_wo_required
+

@@ -53,6 +53,8 @@ class Field(object):
         self._required = required
         self._validation = validation
         self._in_dump = in_dump
+        if default is not None:
+            self.validate(default)
 
     @property
     def name(self):
@@ -69,19 +71,19 @@ class Field(object):
 
     def __get__(self, obj, objtype):
         try:
-            return obj.__dict__[self.name]
+            val = obj.__dict__[self.name]
+            return val() if callable(val) else val
         except AttributeError:
             log.error("The name attribute has not been set for this field.")
             raise
         except KeyError:
             if self.default is not None:
-                return self.default
+                val = self.default
+                return val() if callable(val) else val
             else:
                 raise AttributeError("A value for {} has not been set".format(self.name))
 
     def __set__(self, obj, val):
-        if callable(val):
-            val = val()
         # validate will raise an exception if invalid
         # validate will return False if the value should be removed
         if self.validate(val):
@@ -99,13 +101,14 @@ class Field(object):
         Raises:
             ValidationError
         """
+        val = val() if callable(val) else val
         if not isinstance(val, self._type):
             if val is None and not self.is_required:
                 return False
             else:
-                raise ValidationError(self.name, val, self._type)
+                raise ValidationError(getattr(self, 'name', 'undefined name'), val, self._type)
         elif self._validation is not None and not self._validation(val):
-            raise ValidationError(self.name, val)
+            raise ValidationError(getattr(self, 'name', 'undefined name'), val)
         else:
             return True
 
@@ -124,7 +127,7 @@ class Field(object):
 
     @property
     def default(self):
-        return self._default() if callable(self._default) else self._default
+        return self._default
 
     @property
     def in_dump(self):
@@ -146,6 +149,9 @@ class NumberField(Field):
 class DateField(Field):
     _type = datetime.datetime
 
+    def __init__(self, default=None, required=True, validation=None, in_dump=True):
+        super(DateField, self).__init__(self._pre_convert(default), required, validation, in_dump)
+
     def __get__(self, obj, objtype):
         return super(DateField, self).__get__(obj, objtype).isoformat()
 
@@ -153,41 +159,64 @@ class DateField(Field):
         try:
             if isinstance(val, basestring):
                 val = dateutil.parser.parse(val)
-            super(DateField, self).__set__(obj, val)
+            super(DateField, self).__set__(obj, self._pre_convert(val))
         except (ValueError, AttributeError):
             raise ValidationError(self.name, val, self._type)
+
+    def _pre_convert(self, val):
+        if isinstance(val, basestring):
+            return dateutil.parser.parse(val)
+        else:
+            return val
 
 
 class EnumField(Field):
 
-    def __init__(self, enum_class, *args, **kwargs):
+    def __init__(self, enum_class, default=None, required=True, validation=None, in_dump=True):
         self._type = enum_class
-        super(EnumField, self).__init__(*args, **kwargs)
+        super(EnumField, self).__init__(self._pre_convert(default), required, validation, in_dump)
 
     def __get__(self, obj, objtype):
         return super(EnumField, self).__get__(obj, objtype).value
 
     def __set__(self, obj, val):
         try:
-            value = val if isinstance(val, self._type) else self._type(val)
-            super(EnumField, self).__set__(obj, value)
+            super(EnumField, self).__set__(obj, self._pre_convert(val))
         except ValueError:
             raise ValidationError(self.name, val, self._type)
+
+    def _pre_convert(self, val):
+        if val is not None and not isinstance(val, self._type):
+            return self._type(val)
+        else:
+            return val
 
 
 class ListField(Field):
     _type = tuple
 
-    def __init__(self, element_type, *args, **kwargs):
+    def __init__(self, element_type, default=None, required=True, validation=None, in_dump=True):
         self._element_type = element_type
-        super(ListField, self).__init__(*args, **kwargs)
+        super(ListField, self).__init__(self._pre_convert(default), required, validation, in_dump)
 
     def __set__(self, obj, val):
-        et = self._element_type
-        type_check = lambda el: (el if isinstance(el, et)
-                                 else Raise(ValidationError(self.name, el, et)))
-        liszt = tuple([type_check(element) for element in val])
-        super(ListField, self).__set__(obj, liszt)
+        super(ListField, self).__set__(obj, self._pre_convert(val))
+
+    # @property
+    # def default(self):
+    #     try:
+    #         return tuple(self._default)
+    #     except TypeError:
+    #         # TypeError: 'NoneType' object is not iterable
+    #         return None
+
+    def _pre_convert(self, val):
+        if val is None:
+            return None
+        else:
+            et = self._element_type
+            return tuple(el if isinstance(el, et) else Raise(ValidationError(self.name, el, et))
+                         for el in val)
 
 
 class EntityType(type):
