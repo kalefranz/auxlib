@@ -2,6 +2,7 @@
 import datetime
 import dateutil.parser
 from enum import Enum
+import unittest
 
 from testtools import TestCase, ExpectedException
 
@@ -44,12 +45,13 @@ class DerivedSampleEntity(SampleEntity):
     string_field_w_default = StringField('new_default')
     choice = EnumField(ChooseOne, required=False)
     new_field = IntField()
+    enum_field = ChooseOne.A
 
     def __init__(self, new_field, **kwargs):
         super(DerivedSampleEntity, self).__init__(new_field=new_field, **kwargs)
 
 
-class EntityTests(TestCase):
+class EntityTests(unittest.TestCase):
 
     def test_sample_entity(self):
         se = SampleEntity(string_field='bazaar', integer_field=28, enum_field=ChooseOne.B)
@@ -62,7 +64,7 @@ class EntityTests(TestCase):
         with ExpectedException(ValidationError):
             DerivedSampleEntity(18, string_field_w_default='taxi')
         dse = DerivedSampleEntity(18, string_field_w_default='taxi', string_field='boo',
-                                  integer_field=14, enum_field=ChooseOne.C)
+                                  integer_field=14)
         self.assertEqual(18, dse.new_field)
         self.assertEqual('taxi', dse.string_field_w_default)
         self.assertEqual('boo', dse.string_field)
@@ -121,10 +123,49 @@ class EntityTests(TestCase):
     def test_entity_not_eq_and_hash(self):
         se1 = SampleEntity(string_field='s1', integer_field=82, enum_field=ChooseOne.C)
         de1 = DerivedSampleEntity(18, string_field_w_default='taxi', string_field='boo',
-                                  integer_field=14, enum_field=ChooseOne.C)
+                                  integer_field=14)
         assert not se1 == de1
         assert se1 != de1
         assert hash(se1) != hash(de1)
+
+    def test_inherited_field_set_on_class(self):
+        dse = DerivedSampleEntity(18, string_field_w_default='taxi', string_field='boo',
+                                  integer_field=14)
+        assert dse.enum_field == ChooseOne.A.value
+
+        dse.enum_field = ChooseOne.B
+        assert dse.enum_field == ChooseOne.B.value
+
+        dse.enum_field = 'c'
+        assert dse.enum_field == ChooseOne.C.value
+
+    def test_inherited_field_set_on_instance_object(self):
+        dse = DerivedSampleEntity(18, string_field_w_default='taxi', string_field='boo',
+                                  integer_field=14)
+        assert dse.integer_field == 14
+
+        with ExpectedException(ValidationError):
+            dse.integer_field = 14.4
+
+        dse.integer_field += 14
+        assert dse.integer_field == 28
+
+        with ExpectedException(ValidationError):
+            dse.integer_field = None
+
+    def test_inherited_field_with_default_value(self):
+        dse = DerivedSampleEntity(18, string_field_w_default='taxi', string_field='boo',
+                                  integer_field=14)
+        assert dse.integer_field_w_default == 42
+
+        dse.integer_field_w_default *= 2
+        assert dse.integer_field_w_default == 84
+
+        with ExpectedException(ValidationError):
+            dse.integer_field_w_default = 14.4
+
+        with ExpectedException(ValidationError):
+            dse.integer_field = None
 
 
 class MiscFieldTests(TestCase):
@@ -144,6 +185,12 @@ class MiscFieldTests(TestCase):
         with ExpectedException(ValidationError):
             class Clazz(Entity):
                 int_field = IntField('18')
+
+    def test_or_none_field_option(self):
+        class Clazz(Entity):
+            int_field = IntField(required=False, nullable=True)
+        clazz = Clazz()
+        assert clazz.int_field is None
 
 
 class EnumEntity(Entity):
@@ -254,10 +301,10 @@ class EnumFieldTests(TestCase):
         ee = EnumEntity(enum_field=Color.Red)
 
         d = ee.dump()
-        assert 'enum_field_w_default_wo_required' not in d
         assert 'enum_field_wo_dump' not in d
         assert d.pop('enum_field') == 'red'
         assert d.pop('enum_field_w_default') == 3
+        assert d.pop('enum_field_w_default_wo_required') == 'green'
         assert d.pop('enum_field_w_xtra_validation') == 2
         assert len(d) == 0
 
@@ -343,10 +390,10 @@ class StringFieldTests(TestCase):
         sf = StringEntity(field="maple", field_w_validation=u"öak")
 
         d = sf.dump()
-        assert 'field_w_default_wo_required' not in d
         assert 'field_wo_dump' not in d
         assert d.pop('field') == "maple"
         assert d.pop('field_w_default') == "spruce"
+        assert d.pop('field_w_default_wo_required') == "elm"
         assert d.pop('field_w_validation') == u"öak"
         assert d.pop('field_w_default_w_validation') == "redwood"
         assert len(d) == 0

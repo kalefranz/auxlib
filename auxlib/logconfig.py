@@ -12,6 +12,7 @@ def set_root_level(level=logging.DEBUG):
 
 
 def attach_stderr(level=None):
+    # TODO: set root log level if not set already
     has_stderr_handler = any(handler.name == 'stderr' for handler in root_log.handlers)
     if not has_stderr_handler:
         handler = logging.StreamHandler(sys.stderr)
@@ -22,6 +23,7 @@ def attach_stderr(level=None):
         return True
     else:
         return False
+
 
 def detach_stderr():
     for handler in root_log.handlers:

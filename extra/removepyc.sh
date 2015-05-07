@@ -1,3 +1,4 @@
-#!/bin/bash
+#!/bin/bash -eu
 
-(cd "${1:-.}"; find . -name "*.pyc" | xargs rm -- 2>/dev/null) || echo "ok"
+cd "${1:-.}"
+find . -name "*.pyc" -delete

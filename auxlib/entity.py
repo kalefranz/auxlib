@@ -32,9 +32,12 @@ from enum import Enum
 from auxlib.exceptions import ValidationError, Raise
 
 from auxlib.collection import AttrDict
+from auxlib.logconfig import attach_stderr, set_root_level
 
 
 log = logging.getLogger(__name__)
+
+RESERVED_KEY_MODIFIED = "__default__"
 
 
 class Field(object):
@@ -48,11 +51,12 @@ class Field(object):
         dump (boolean, optional):
     """
 
-    def __init__(self, default=None, required=True, validation=None, in_dump=True):
+    def __init__(self, default=None, required=True, validation=None, in_dump=True, nullable=False):
         self._default = default
         self._required = required
         self._validation = validation
         self._in_dump = in_dump
+        self._nullable = nullable
         if default is not None:
             self.validate(default)
 
@@ -80,6 +84,8 @@ class Field(object):
             if self.default is not None:
                 val = self.default
                 return val() if callable(val) else val
+            elif self._nullable:
+                return None
             else:
                 raise AttributeError("A value for {} has not been set".format(self.name))
 
@@ -103,7 +109,7 @@ class Field(object):
         """
         val = val() if callable(val) else val
         if not isinstance(val, self._type):
-            if val is None and not self.is_required:
+            if val is None and not self.required:
                 return False
             else:
                 raise ValidationError(getattr(self, 'name', 'undefined name'), val, self._type)
@@ -114,7 +120,7 @@ class Field(object):
 
 
     @property
-    def is_required(self):
+    def required(self):
         return self._required
 
     @property
@@ -132,6 +138,11 @@ class Field(object):
     @property
     def in_dump(self):
         return self._in_dump
+
+    @property
+    def nullable(self):
+        return self._nullable
+
 
 
 class IntField(Field):
@@ -206,7 +217,31 @@ class ListField(Field):
 
 class EntityType(type):
 
+    def __new__(mcs, name, bases, dct):
+        # if we're about to mask a field that's already been created with something that's
+        #  not a field, then assign it to an alternate variable name
+        non_field_keys = (key for key, value in dct.iteritems()
+                          if not isinstance(value, Field) and not key.startswith('__'))
+        try:
+            entity_subclasses = [base for base in bases
+                                 if issubclass(base, Entity) and base is not Entity]
+        except NameError:
+            # NameError: global name 'Entity' is not defined
+            entity_subclasses = []
+        if entity_subclasses:
+            keys_to_rename = [key for key in non_field_keys
+                              if any(isinstance(base.__dict__.get(key, None), Field)
+                                     for base in entity_subclasses)]
+            for key in keys_to_rename:
+                dct[key + RESERVED_KEY_MODIFIED] = dct.pop(key)
+
+        return super(EntityType, mcs).__new__(mcs, name, bases, dct)
+
     def __init__(cls, name, bases, attr):
+        set_root_level()
+        attach_stderr()
+        # log.error(">> {} >> {}".format(name, vars(cls)))
+
         super(EntityType, cls).__init__(name, bases, attr)
         cls.__fields__ = dict(cls.__fields__) if hasattr(cls, '__fields__') else dict()
         cls.__fields__.update({name: field.set_name(name)
@@ -228,13 +263,14 @@ class Entity(object):
     # TODO: add arg order to fields like in enum34
 
     def __init__(self, **kwargs):
-        for key in self.__fields__:
-            if key in kwargs:
-                setattr(self, key, kwargs.get(key))
-            # else:
-            #     field = self.__fields__.get(key)
-            #     if field.is_required:
-            #         setattr(self, key, field.default)
+        for key, field in self.__fields__.iteritems():
+            try:
+                setattr(self, key, kwargs[key])
+            except KeyError:
+                check_key = key + RESERVED_KEY_MODIFIED
+                if hasattr(self, check_key):
+                    setattr(self, key, getattr(self, check_key))
+
         self.validate()
 
     @classmethod
@@ -243,7 +279,7 @@ class Entity(object):
         search_maps = (AttrDict(override_fields), ) + objects
         for key, field in cls.__fields__.iteritems():
             value = find_or_none(key, search_maps)
-            if value is not None or field.is_required:
+            if value is not None or field.required:
                 init_vars[key] = field.type(value) if field.is_enum else value
         return cls(**init_vars)
 
@@ -255,9 +291,12 @@ class Entity(object):
         try:
             reduce(lambda x, y: y, (getattr(self, name)
                                     for name, field in self.__fields__.items()
-                                    if field.is_required))
+                                    if field.required))
         except AttributeError as e:
             raise ValidationError(None, msg=e.message)
+        except TypeError as e:
+            if "no initial value" not in e.message:
+                raise
 
     def __repr__(self):
         _repr = lambda val: repr(val.value) if isinstance(val, Enum) else repr(val)
@@ -271,10 +310,9 @@ class Entity(object):
 
     def dump(self):
         return {field.name: value
-                for field, value in ((field, getattr(self, field.name))
-                                     for field in self.__dump_fields()
-                                     if field.is_required)
-                if value is not None}
+                for field, value in ((field, getattr(self, field.name, None))
+                                     for field in self.__dump_fields())
+                if value is not None or field.nullable}
 
     @classmethod
     def __dump_fields(cls):
