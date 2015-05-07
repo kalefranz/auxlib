@@ -29,15 +29,14 @@ import logging
 
 import dateutil.parser
 from enum import Enum
-from auxlib.exceptions import ValidationError, Raise
 
+from auxlib.exceptions import ValidationError, Raise
 from auxlib.collection import AttrDict
-from auxlib.logconfig import attach_stderr, set_root_level
 
 
 log = logging.getLogger(__name__)
 
-RESERVED_KEY_MODIFIED = "__default__"
+KEY_OVERRIDES_MAP = "__key_overrides__"
 
 
 class Field(object):
@@ -74,10 +73,13 @@ class Field(object):
         return self
 
     def __get__(self, obj, objtype):
+        if obj is None:
+            # handle the case of fields inherited from subclass but overrode on class object
+            return getattr(objtype, KEY_OVERRIDES_MAP)[self.name]
         try:
             val = obj.__dict__[self.name]
             return val() if callable(val) else val
-        except AttributeError:
+        except AttributeError as e:
             log.error("The name attribute has not been set for this field.")
             raise
         except KeyError:
@@ -142,7 +144,6 @@ class Field(object):
     @property
     def nullable(self):
         return self._nullable
-
 
 
 class IntField(Field):
@@ -229,32 +230,21 @@ class EntityType(type):
             # NameError: global name 'Entity' is not defined
             entity_subclasses = []
         if entity_subclasses:
-            keys_to_rename = [key for key in non_field_keys
-                              if any(isinstance(base.__dict__.get(key, None), Field)
-                                     for base in entity_subclasses)]
-            for key in keys_to_rename:
-                dct[key + RESERVED_KEY_MODIFIED] = dct.pop(key)
+            keys_to_override = [key for key in non_field_keys
+                                if any(isinstance(base.__dict__.get(key, None), Field)
+                                       for base in entity_subclasses)]
+            dct[KEY_OVERRIDES_MAP] = {key: dct.pop(key) for key in keys_to_override}
 
         return super(EntityType, mcs).__new__(mcs, name, bases, dct)
 
     def __init__(cls, name, bases, attr):
-        set_root_level()
-        attach_stderr()
-        # log.error(">> {} >> {}".format(name, vars(cls)))
-
         super(EntityType, cls).__init__(name, bases, attr)
         cls.__fields__ = dict(cls.__fields__) if hasattr(cls, '__fields__') else dict()
         cls.__fields__.update({name: field.set_name(name)
                                for name, field in cls.__dict__.items()
                                if isinstance(field, Field)})
-        cls.__validate_defaults()
         if hasattr(cls, '__register__'):
             cls.__register__()
-
-    def __validate_defaults(cls):
-        (field.validate(field.default)
-         for field in cls.__fields__.values()
-         if field.default is not None)
 
 
 class Entity(object):
@@ -267,10 +257,9 @@ class Entity(object):
             try:
                 setattr(self, key, kwargs[key])
             except KeyError:
-                check_key = key + RESERVED_KEY_MODIFIED
-                if hasattr(self, check_key):
-                    setattr(self, key, getattr(self, check_key))
-
+                # handle the case of fields inherited from subclass but overrode on class object
+                if key in getattr(self, KEY_OVERRIDES_MAP, []):
+                    setattr(self, key, getattr(self, KEY_OVERRIDES_MAP)[key])
         self.validate()
 
     @classmethod
