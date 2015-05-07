@@ -313,7 +313,9 @@ class Entity(object):
     def __eq__(self, other):
         if self.__class__ != other.__class__:
             return False
-        return all(getattr(self, field) == getattr(other, field) for field in self.__fields__)
+        rando_default = 192837465647382910
+        return all(getattr(self, field, rando_default) == getattr(other, field, rando_default)
+                   for field in self.__fields__)
 
     def __hash__(self):
         return sum(hash(getattr(self, field, None)) for field in self.__fields__)
