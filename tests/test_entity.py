@@ -428,16 +428,15 @@ class StringFieldTests(TestCase):
             StringEntity2()
 
     def test_nullable_wo_default(self):
-        # field
-        # field_w_validation
-        # field_wo_default_wo_required
-        sen = StringEntityNullable()
-        assert sen.field is None
-        assert sen.field_w_validation is None
+        with ExpectedException(ValidationError):
+            StringEntityNullable(field_w_validation="")
+        sen = StringEntityNullable(field="blue", field_w_validation="red")
+        assert sen.field == "blue"
+        assert sen.field_w_validation == "red"
 
         d = sen.dump()
-        assert d.pop('field') is None
-        assert d.pop('field_w_validation') is None
+        assert d.pop('field') is "blue"
+        assert d.pop('field_w_validation') is "red"
 
         # now assign values
         sen.field = 'apple'
@@ -459,21 +458,26 @@ class StringFieldTests(TestCase):
         assert d.pop('field') is None
         assert d.pop('field_w_validation') is None
 
-        sen = StringEntityNullable(field='grapefruit')
+        sen = StringEntityNullable(field='grapefruit', field_w_validation="")
         assert sen.field == 'grapefruit'
-        assert sen.field_w_validation is None
+        assert sen.field_w_validation == ""
 
         sen.field = None
         assert sen.field is None
 
     def test_nullable_w_default(self):
-        sen = StringEntityNullable(field_w_default=None, field_w_default_wo_required=None)
+        with ExpectedException(ValidationError):
+            StringEntityNullable(field_w_default=None, field_w_default_wo_required=None)
+        sen = StringEntityNullable(field=None, field_w_validation="", field_w_default=None,
+                                   field_w_default_wo_required=None)
+        assert sen.field is None
         assert sen.field_w_default is None
         assert sen.field_w_default_wo_required is None
 
-        sen = StringEntityNullable()
+        sen = StringEntityNullable(field=None, field_w_validation="")
         assert sen.field_w_default == "spruce"
         assert sen.field_w_default_wo_required == "elm"
+        assert sen.field_w_validation == ""
 
         sen.field_w_default = None
         sen.field_w_default_wo_required = None

@@ -134,6 +134,8 @@ class Field(object):
 
     def __get__(self, instance, instance_type):
         try:
+            if instance is None:  # if calling from the class object
+                return getattr(instance_type, KEY_OVERRIDES_MAP)[self.name]
             return instance.__dict__[self.name]
         except AttributeError:
             log.error("The name attribute has not been set for this field.")
@@ -325,10 +327,19 @@ class Entity(object):
         for key, field in self.__fields__.iteritems():
             try:
                 setattr(self, key, kwargs[key])
-            except KeyError:
+            except KeyError as e:
                 # handle the case of fields inherited from subclass but overrode on class object
                 if key in getattr(self, KEY_OVERRIDES_MAP, []):
                     setattr(self, key, getattr(self, KEY_OVERRIDES_MAP)[key])
+                elif not field.required or field.default is not None:
+                    pass
+                else:
+                    raise ValidationError(key)
+            except ValidationError:
+                if kwargs[key] is None and not field.required:
+                    pass
+                else:
+                    raise
         self.validate()
 
     @classmethod

@@ -27,6 +27,9 @@ class ValidationError(AuxlibError, TypeError):
     def __init__(self, key, value=None, valid_types=None, msg=None):
         if msg is not None:
             super(ValidationError, self).__init__(msg)
+        elif value is None:
+            super(ValidationError, self).__init__("Value for {} not given or invalid."
+                                                  "".format(key))
         elif valid_types is None:
             super(ValidationError, self).__init__("Invalid value {} for {}"
                                                   "".format(value, key))
