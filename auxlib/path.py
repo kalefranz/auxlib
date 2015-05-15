@@ -34,7 +34,7 @@ class PackageFile(object):
 
 
 def open_package_file(file_path, package_name):
-    file_path = os.path.normpath(os.path.expandvars(os.path.expanduser(file_path)))
+    file_path = expand(file_path)
 
     # look for file at relative path
     if os.path.exists(file_path):
@@ -57,3 +57,7 @@ def open_package_file(file_path, package_name):
     msg = "file for module [{}] cannot be found at path {}".format(package_name, file_path)
     log.error(msg)
     raise IOError(msg)
+
+
+def expand(path):
+    return os.path.normpath(os.path.expanduser(os.path.expandvars(path)))

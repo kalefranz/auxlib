@@ -5,6 +5,65 @@ This module has many of the same motivations as the python Marshmallow package.
 <http://marshmallow.readthedocs.org/en/latest/why.html>
 
 
+
+Optional Field Properties:
+  - validation = None
+  - default = None
+  - required = True
+  - in_dump = True
+  - nullable = False
+
+Behaviors:
+  - Nullable is a "hard" setting, in that the value is either always or never allowed to be None.
+  - What happens then if required=False and nullable=False?
+      - The object can be init'd without a value (though not with a None value).
+        getattr throws AttributeError
+      - Any assignment must be not None.
+
+
+  - Setting a value to None doesn't "unset" a value.  (That's what del is for.)  And you can't
+    del a value if required=True, nullable=False, default=None.  That should raise
+    OperationNotAllowedError.
+
+
+  - Disabling in_dump is a "hard" setting, in that with it disabled the field will never get
+    dumped.  With it enabled, the field may or may not be dumped depending on its value and other
+    settings.
+
+  - Required is a "hard" setting, in that if True, a valid value or default must be provided. None
+    is only a valid value or default if nullable is True.
+
+  - In general, nullable means that None is a valid value.
+    - getattr returns None instead of raising Attribute error
+    - If in_dump, field is given with null value.
+    - If default is not None, assigning None clears a previous assignment. Future getattrs return
+      the default value.
+    - What does nullable mean with default=None and required=True? Does instantiation raise
+      an error if assignment not made on init? Can IntField(nullable=True) be init'd?
+
+  - If required=False and nullable=False, field will only be in dump if field!=None.
+    Also, getattr raises AttributeError.
+  - If required=False and nullable=True, field will be in dump if field==None.
+
+  - What does required and default mean?
+  - What does required and default and nullable mean?
+  - If in_dump is True, does default value get dumped:
+    - if no assignment, default exists
+    - if nullable, and assigned None
+  - Can assign None?
+  - How does optional validation work with nullable and assigning None?
+  - When does gettattr throw AttributeError, and when does it return None?
+
+
+
+
+
+
+
+
+
+
+
 Examples:
     >>> class Color(Enum):
     ...     blue = 0
@@ -30,7 +89,7 @@ import logging
 import dateutil.parser
 from enum import Enum
 
-from auxlib.exceptions import ValidationError, Raise
+from auxlib.exceptions import ValidationError, Raise, ThisShouldNeverHappenError
 from auxlib.collection import AttrDict
 
 
@@ -44,7 +103,8 @@ class Field(object):
 
     Arguments:
         types_ (primitive literal or type or sequence of types):
-        default (any, callable, optional):
+        default (any, callable, optional):  If default is callable, it's guaranteed to return a
+            valid value at the time of Entity creation.
         required (boolean, optional):
         validation (callable, optional):
         dump (boolean, optional):
@@ -57,7 +117,7 @@ class Field(object):
         self._in_dump = in_dump
         self._nullable = nullable
         if default is not None:
-            self.validate(default)
+            self.validate(default() if callable(default) else default)
 
     @property
     def name(self):
@@ -72,18 +132,18 @@ class Field(object):
         self._name = name
         return self
 
-    def __get__(self, obj, objtype):
-        if obj is None:
+    def __get__(self, instance, instance_type):
+        if instance is None:
             # handle the case of fields inherited from subclass but overrode on class object
-            return getattr(objtype, KEY_OVERRIDES_MAP)[self.name]
+            return getattr(instance_type, KEY_OVERRIDES_MAP)[self.name]
         try:
-            val = obj.__dict__[self.name]
-            return val() if callable(val) else val
+            return instance.__dict__[self.name]
         except AttributeError as e:
             log.error("The name attribute has not been set for this field.")
             raise
         except KeyError:
             if self.default is not None:
+                # default *can* be a callable
                 val = self.default
                 return val() if callable(val) else val
             elif self._nullable:
@@ -91,35 +151,39 @@ class Field(object):
             else:
                 raise AttributeError("A value for {} has not been set".format(self.name))
 
-    def __set__(self, obj, val):
+    def __set__(self, instance, val):
         # validate will raise an exception if invalid
         # validate will return False if the value should be removed
         if self.validate(val):
-            obj.__dict__[self.name] = val
+            instance.__dict__[self.name] = val
         else:
-            obj.__dict__.pop(self.name, None)
+            # if self.default is not None:
+            #     instance.__dict__.pop(self.name, None)
+            # elif self.nullable:
+            #     instance.__dict__[self.name] = None
+            # else:
+            #     # TODO: right now can happen if required=False, nullable=False
+            raise ThisShouldNeverHappenError()
+
+    def __delete__(self, instance):
+        instance.__dict__.pop(self.name, None)
 
     def validate(self, val):
         """
 
         Returns:
             True: if val is valid
-            False: if val should be unset for the field
 
         Raises:
             ValidationError
         """
-        val = val() if callable(val) else val
-        if not isinstance(val, self._type):
-            if val is None and not self.required:
-                return False
-            else:
-                raise ValidationError(getattr(self, 'name', 'undefined name'), val, self._type)
-        elif self._validation is not None and not self._validation(val):
-            raise ValidationError(getattr(self, 'name', 'undefined name'), val)
-        else:
+        # note here calling, but not assigning; could lead to unexpected behavior
+        if isinstance(val, self._type):
+            if self._validation is None or self._validation(val):
+                return True
+        elif val is None and self.nullable:
             return True
-
+        raise ValidationError(getattr(self, 'name', 'undefined name'), val)
 
     @property
     def required(self):
@@ -165,7 +229,8 @@ class DateField(Field):
         super(DateField, self).__init__(self._pre_convert(default), required, validation, in_dump)
 
     def __get__(self, obj, objtype):
-        return super(DateField, self).__get__(obj, objtype).isoformat()
+        val = super(DateField, self).__get__(obj, objtype)
+        return val.isoformat() if val is not None else None
 
     def __set__(self, obj, val):
         try:
@@ -184,7 +249,8 @@ class EnumField(Field):
         super(EnumField, self).__init__(self._pre_convert(default), required, validation, in_dump)
 
     def __get__(self, obj, objtype):
-        return super(EnumField, self).__get__(obj, objtype).value
+        val = super(EnumField, self).__get__(obj, objtype)
+        return val.value if val is not None else None
 
     def __set__(self, obj, val):
         try:
@@ -193,7 +259,9 @@ class EnumField(Field):
             raise ValidationError(self.name, val, self._type)
 
     def _pre_convert(self, val):
-        return self._type(val) if val is not None and not isinstance(val, self._type) else val
+        if val is None:
+            return val
+        return val if isinstance(val, self._type) else self._type(val)
 
 
 class ListField(Field):
@@ -205,6 +273,10 @@ class ListField(Field):
 
     def __set__(self, obj, val):
         super(ListField, self).__set__(obj, self._pre_convert(val))
+
+    def __get__(self, obj, objtype):
+        val = super(ListField, self).__get__(obj, objtype)
+        return val if val is not None else tuple()
 
     def _pre_convert(self, val):
         if val is None:
@@ -218,17 +290,20 @@ class ListField(Field):
 
 class EntityType(type):
 
+    @staticmethod
+    def __get_entity_subclasses():
+        try:
+            return [base for base in bases if issubclass(base, Entity) and base is not Entity]
+        except NameError:
+            # NameError: global name 'Entity' is not defined
+            return []
+
     def __new__(mcs, name, bases, dct):
         # if we're about to mask a field that's already been created with something that's
         #  not a field, then assign it to an alternate variable name
         non_field_keys = (key for key, value in dct.iteritems()
                           if not isinstance(value, Field) and not key.startswith('__'))
-        try:
-            entity_subclasses = [base for base in bases
-                                 if issubclass(base, Entity) and base is not Entity]
-        except NameError:
-            # NameError: global name 'Entity' is not defined
-            entity_subclasses = []
+        entity_subclasses = EntityType.__get_entity_subclasses()
         if entity_subclasses:
             keys_to_override = [key for key in non_field_keys
                                 if any(isinstance(base.__dict__.get(key, None), Field)

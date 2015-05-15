@@ -319,6 +319,17 @@ class StringEntity(Entity):
     field_wo_default_wo_required = StringField(required=False)
 
 
+class StringEntityNullable(Entity):
+    field = StringField(nullable=True)
+    field_w_default = StringField("spruce", nullable=True)
+    field_w_default_wo_required = StringField("elm", False, nullable=True)
+    field_w_validation = StringField(validation=lambda v: len(v) <= 6, nullable=True)
+    field_w_default_w_validation = StringField("redwood", validation=lambda v: len(v) > 6,
+                                               nullable=True)
+    field_wo_dump = StringField("juniper", in_dump=False, nullable=True)
+    field_wo_default_wo_required = StringField(required=False, nullable=True)
+
+
 class StringFieldTests(TestCase):
 
     def test_set_optional_field_to_none(self):
@@ -402,7 +413,72 @@ class StringFieldTests(TestCase):
         with ExpectedException(ValidationError):
             class StringEntity2(Entity):
                 bad_field_default = StringField("redwood", validation=lambda v: len(v) < 3)
-            se2 = StringEntity2()
+            StringEntity2()
+
+    def test_nullable_wo_default(self):
+        # field
+        # field_w_validation
+        # field_wo_default_wo_required
+        sen = StringEntityNullable()
+        assert sen.field is None
+        assert sen.field_w_validation is None
+
+        d = sen.dump()
+        assert d.pop('field') is None
+        assert d.pop('field_w_validation') is None
+
+        # now assign values
+        sen.field = 'apple'
+        sen.field_w_validation = 'pear'
+
+        with ExpectedException(ValidationError):
+            sen.field_w_validation = 'pineapple'
+
+        assert sen.field == 'apple'
+        assert sen.field_w_validation == 'pear'
+
+        sen.field = None
+        sen.field_w_validation = None
+
+        assert sen.field is None
+        assert sen.field_w_validation is None
+
+        d = sen.dump()
+        assert d.pop('field') is None
+        assert d.pop('field_w_validation') is None
+
+        sen = StringEntityNullable(field='grapefruit')
+        assert sen.field == 'grapefruit'
+        assert sen.field_w_validation is None
+
+        sen.field = None
+        assert sen.field is None
+
+    def test_nullable_w_default(self):
+        sen = StringEntityNullable(field_w_default=None, field_w_default_wo_required=None)
+        assert sen.field_w_default is None
+        assert sen.field_w_default_wo_required is None
+
+        sen = StringEntityNullable()
+        assert sen.field_w_default == "spruce"
+        assert sen.field_w_default_wo_required == "elm"
+
+        sen.field_w_default = None
+        sen.field_w_default_wo_required = None
+        assert sen.field_w_default is None
+        assert sen.field_w_default_wo_required is None
+
+        # Now, to get the default value back, I have to re-assign the default value!
+        sen.field_w_default = "spruce"
+        sen.field_w_default_wo_required = "elm"
+        assert sen.field_w_default == "spruce"
+        assert sen.field_w_default_wo_required == "elm"
+
+    def test_rule(self):
+        pass
+        # field_wo_default_wo_required
+        # If required=False and nullable=True, field will be in dump if field==None.
+
 
 
 NOW = datetime.datetime.now()

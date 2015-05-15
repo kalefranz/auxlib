@@ -1,12 +1,9 @@
-from enum import Enum
-
-
-def Raise(exception):
+def Raise(exception):  # noqa
     raise exception
 
 
 class AuxlibError(object):
-    """Mixin to identify all exceptions associated with the auxlib package."""
+    """Mixin to identify exceptions associated with the auxlib package."""
 
 
 class NotFoundError(AuxlibError, KeyError):
@@ -36,3 +33,7 @@ class ValidationError(AuxlibError, TypeError):
         else:
             super(ValidationError, self).__init__("{0} must be of type {1}, not {2}"
                                                   "".format(key, valid_types, repr(value)))
+
+
+class ThisShouldNeverHappenError(AuxlibError, AttributeError):
+    pass
