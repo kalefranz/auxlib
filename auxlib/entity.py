@@ -133,12 +133,9 @@ class Field(object):
         return self
 
     def __get__(self, instance, instance_type):
-        if instance is None:
-            # handle the case of fields inherited from subclass but overrode on class object
-            return getattr(instance_type, KEY_OVERRIDES_MAP)[self.name]
         try:
             return instance.__dict__[self.name]
-        except AttributeError as e:
+        except AttributeError:
             log.error("The name attribute has not been set for this field.")
             raise
         except KeyError:
@@ -154,16 +151,8 @@ class Field(object):
     def __set__(self, instance, val):
         # validate will raise an exception if invalid
         # validate will return False if the value should be removed
-        if self.validate(val):
-            instance.__dict__[self.name] = val
-        else:
-            # if self.default is not None:
-            #     instance.__dict__.pop(self.name, None)
-            # elif self.nullable:
-            #     instance.__dict__[self.name] = None
-            # else:
-            #     # TODO: right now can happen if required=False, nullable=False
-            raise ThisShouldNeverHappenError()
+        self.validate(val)
+        instance.__dict__[self.name] = val
 
     def __delete__(self, instance):
         instance.__dict__.pop(self.name, None)
@@ -225,14 +214,13 @@ class NumberField(Field):
 class DateField(Field):
     _type = datetime.datetime
 
-    def __init__(self, default=None, required=True, validation=None, in_dump=True):
-        super(DateField, self).__init__(self._pre_convert(default), required, validation, in_dump)
+    def __init__(self, default=None, required=True, validation=None, in_dump=True, nullable=False):
+        super(DateField, self).__init__(self._pre_convert(default), required, validation,
+                                        in_dump, nullable)
 
     def __get__(self, obj, objtype):
         val = super(DateField, self).__get__(obj, objtype)
-        if val is None:
-            return None
-        return val.isoformat()
+        return None if val is None else val.isoformat()
 
     def __set__(self, obj, val):
         try:
@@ -246,15 +234,15 @@ class DateField(Field):
 
 class EnumField(Field):
 
-    def __init__(self, enum_class, default=None, required=True, validation=None, in_dump=True):
+    def __init__(self, enum_class, default=None, required=True, validation=None,
+                 in_dump=True, nullable=False):
         self._type = enum_class
-        super(EnumField, self).__init__(self._pre_convert(default), required, validation, in_dump)
+        super(EnumField, self).__init__(self._pre_convert(default), required, validation,
+                                        in_dump, nullable)
 
     def __get__(self, obj, objtype):
         val = super(EnumField, self).__get__(obj, objtype)
-        if val is None:
-            return None
-        return val.value
+        return None if val is None else val.value
 
     def __set__(self, obj, val):
         try:
@@ -271,18 +259,18 @@ class EnumField(Field):
 class ListField(Field):
     _type = tuple
 
-    def __init__(self, element_type, default=None, required=True, validation=None, in_dump=True):
+    def __init__(self, element_type, default=None, required=True, validation=None,
+                 in_dump=True, nullable=False):
         self._element_type = element_type
-        super(ListField, self).__init__(self._pre_convert(default), required, validation, in_dump)
+        super(ListField, self).__init__(self._pre_convert(default), required, validation,
+                                        in_dump, nullable)
 
     def __set__(self, obj, val):
         super(ListField, self).__set__(obj, self._pre_convert(val))
 
     def __get__(self, obj, objtype):
         val = super(ListField, self).__get__(obj, objtype)
-        if val is None:
-            return tuple()
-        return val
+        return tuple() if val is None else val
 
     def _pre_convert(self, val):
         if val is None:
@@ -365,8 +353,11 @@ class Entity(object):
         except AttributeError as e:
             raise ValidationError(None, msg=e.message)
         except TypeError as e:
-            if "no initial value" not in e.message:
-                raise
+            if "no initial value" in e.message:
+                # TypeError: reduce() of empty sequence with no initial value
+                pass
+            else:
+                raise  # pragma: no cover
 
     def __repr__(self):
         _repr = lambda val: repr(val.value) if isinstance(val, Enum) else repr(val)

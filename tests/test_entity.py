@@ -501,6 +501,7 @@ class DateEntity(Entity):
     field_w_default = DateField(NOW)
     field_w_default_callable = DateField(NOW_CALLABLE)
     field_w_default_w_validation = DateField(NOW, validation=lambda v: v >= NOW)
+    field_wo_required_w_nullable = DateField(required=False, nullable=True)
 
 
 class DateFieldTests(TestCase):
@@ -547,7 +548,24 @@ class DateFieldTests(TestCase):
     def test_callable_values(self):
         de = DateEntity(field=NOW)
         assert isinstance(de.field, basestring)
+        assert de.field == NOW.isoformat()
         assert isinstance(de.field_w_default_callable, basestring)
+        assert (dateutil.parser.parse(de.field_w_default_callable)
+                < dateutil.parser.parse(de.field_w_default_callable))
+
+    def test_nullable_field(self):
+        de = DateEntity(field=NOW)
+
+        assert de.field_wo_required_w_nullable == None
+
+        with ExpectedException(ValidationError):
+            de.field = None
+
+        de.field_wo_required_w_nullable = NOW
+        assert de.field_wo_required_w_nullable == NOW.isoformat()
+
+        de.field_wo_required_w_nullable = None
+        assert de.field_wo_required_w_nullable == None
 
 
 class ListEntity(Entity):
