@@ -230,7 +230,9 @@ class DateField(Field):
 
     def __get__(self, obj, objtype):
         val = super(DateField, self).__get__(obj, objtype)
-        return val.isoformat() if val is not None else None
+        if val is None:
+            return None
+        return val.isoformat()
 
     def __set__(self, obj, val):
         try:
@@ -250,7 +252,9 @@ class EnumField(Field):
 
     def __get__(self, obj, objtype):
         val = super(EnumField, self).__get__(obj, objtype)
-        return val.value if val is not None else None
+        if val is None:
+            return None
+        return val.value
 
     def __set__(self, obj, val):
         try:
@@ -276,7 +280,9 @@ class ListField(Field):
 
     def __get__(self, obj, objtype):
         val = super(ListField, self).__get__(obj, objtype)
-        return val if val is not None else tuple()
+        if val is None:
+            return tuple()
+        return val
 
     def _pre_convert(self, val):
         if val is None:
@@ -291,7 +297,7 @@ class ListField(Field):
 class EntityType(type):
 
     @staticmethod
-    def __get_entity_subclasses():
+    def __get_entity_subclasses(bases):
         try:
             return [base for base in bases if issubclass(base, Entity) and base is not Entity]
         except NameError:
@@ -303,7 +309,7 @@ class EntityType(type):
         #  not a field, then assign it to an alternate variable name
         non_field_keys = (key for key, value in dct.iteritems()
                           if not isinstance(value, Field) and not key.startswith('__'))
-        entity_subclasses = EntityType.__get_entity_subclasses()
+        entity_subclasses = EntityType.__get_entity_subclasses(bases)
         if entity_subclasses:
             keys_to_override = [key for key in non_field_keys
                                 if any(isinstance(base.__dict__.get(key, None), Field)

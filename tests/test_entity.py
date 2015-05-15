@@ -240,7 +240,10 @@ class EnumFieldTests(TestCase):
         assert ee.enum_field_w_xtra_validation == 2
         assert ee.enum_field_wo_dump == 'black'
 
-        ee.enum_field_w_default_wo_required = None
+        with ExpectedException(ValidationError):
+            ee.enum_field_w_default_wo_required = None
+
+        del ee.enum_field_w_default_wo_required
         assert ee.enum_field_w_default_wo_required == 'green'
 
     def test_default(self):
@@ -341,15 +344,21 @@ class StringFieldTests(TestCase):
 
         with ExpectedException(ValidationError):
             sf.field = None
-        sf.field_w_default_wo_required = None
+
+        with ExpectedException(ValidationError):
+            sf.field_w_default_wo_required = None
+        del sf.field_w_default_wo_required
         sf.field_wo_default_wo_required = "birch"
+
         assert sf.field_w_default_wo_required == "elm"
         assert sf.field_wo_default_wo_required == "birch"
 
-        sf.field_wo_default_wo_required = None
+        with ExpectedException(ValidationError):
+            sf.field_wo_default_wo_required = None
+
+        del sf.field_wo_default_wo_required
         with ExpectedException(AttributeError):
             sf.field_wo_default_wo_required
-
 
     def test_assignment(self):
         sf = StringEntity(field="maple", field_w_validation="oak")
@@ -374,7 +383,10 @@ class StringFieldTests(TestCase):
         assert sf.field_w_default_w_validation == "coconut"
         assert sf.field_wo_dump == "pineapple"
 
-        sf.field_w_default_wo_required = None  # clear the set value and override with default
+        with ExpectedException(ValidationError):
+            sf.field_w_default_wo_required = None
+
+        del sf.field_w_default_wo_required
         assert sf.field_w_default_wo_required == "elm"
 
         with ExpectedException(ValidationError):
@@ -533,8 +545,9 @@ class DateFieldTests(TestCase):
             DateEntity(field=15)
 
     def test_callable_values(self):
-        de = DateEntity(field=NOW_CALLABLE)
+        de = DateEntity(field=NOW)
         assert isinstance(de.field, basestring)
+        assert isinstance(de.field_w_default_callable, basestring)
 
 
 class ListEntity(Entity):
@@ -572,8 +585,9 @@ class ListFieldTests(TestCase):
         le.field_wo_required = [33.3, 44.4]
         assert le.field_wo_required == tuple([33.3, 44.4])
 
-        le.field_wo_required = None
-
+        with ExpectedException(ValidationError):
+            le.field_wo_required = None
+        del le.field_wo_required
         assert not hasattr(le, 'field_wo_required')
         with ExpectedException(AttributeError):
             le.field_wo_required
