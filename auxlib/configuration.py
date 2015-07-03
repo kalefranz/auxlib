@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """A specialized map implementation to manage configuration and context information.
 
@@ -39,11 +38,11 @@ def reverse_env_key(app_name, key):
 
 
 class Configuration(object):
-    """A specialized map implementation to manage configuration and context information. Values
-    can be accessed (read, not assigned) as either a dict lookup (e.g. `config[key]`)are as an
+    """A map implementation to manage configuration and context information. Values
+    can be accessed (read, not assigned) as either a dict lookup (e.g. `config[key]`) or as an
     attribute (e.g. `config.key`).
 
-    This class makes the foundational assumption of a yaml configuration file, a values in yaml
+    This class makes the foundational assumption of a yaml configuration file, as values in yaml
     are typed.
 
     This class allows overriding configuration keys with environment variables. Given an app name
