@@ -3,11 +3,13 @@
 
 Features:
   * Uses YAML configuration files
-  * Use environment variables to override config file
+  * Use environment variables to override configs
   * Can pass a list of required parameters at initialization
   * Works with encrypted files
   * Accepts multiple config files
   * Can query information from consul
+  * Does type coercion on strings
+  *
 
 """
 import logging
@@ -15,7 +17,7 @@ import os
 
 from auxlib.collection import listify
 from auxlib.decorators import memoize, memoizemethod
-from auxlib.exceptions import AssignmentError
+from auxlib.exceptions import AssignmentError, NotFoundError
 from auxlib.path import PackageFile
 from auxlib.type_coercion import typify
 
@@ -65,7 +67,7 @@ class Configuration(object):
         >>> for (key, value) in [('FOO_BAR', 22), ('FOO_BAZ', 'yes'), ('FOO_BANG', 'monkey')]:
         ...     os.environ[key] = str(value)
 
-        >>> context = Configuration('foo')
+        >>> context = Configuration('foo', __package__)
         >>> context.bar, type(context.bar)
         (22, <type 'int'>)
         >>> context['baz'], type(context['baz'])
@@ -73,7 +75,7 @@ class Configuration(object):
         >>> context.bang, type(context.bang)
         ('monkey', <type 'str'>)
 
-        >>> context = Configuration('foo', required_parameters=('bar', 'boink'))
+        >>> context = Configuration('foo', __package__, required_parameters=('bar', 'boink')).verify()
         Traceback (most recent call last):
         ...
         EnvironmentError: Required key(s) not found in environment
@@ -82,15 +84,29 @@ class Configuration(object):
 
     """
 
-    def __init__(self, app_name, config_sources=None, required_parameters=None):
-        self._config_map = None
-        self._registered_env_keys = None
-
+    def __init__(self, app_name, package, config_sources=None, required_parameters=None):
         self.app_name = app_name
-        self._required_keys = set(listify(required_parameters))
-        self.__sources = listify(config_sources)
+        self.package = package
+        self.__initial_load = True
 
-        self.reload()
+        self.__sources = list()
+        self._config_map = dict()
+        self._registered_env_keys = set()
+        self._required_keys = set(listify(required_parameters))
+
+        self.append_sources(config_sources, force_reload=True)
+        self.__load_environment_keys()
+
+    def append_sources(self, config_sources, parent_source=None, force_reload=False):
+        for source in listify(config_sources):
+            source.parent_config = self
+            self.__load_source(source, force_reload)
+            source.parent_source = parent_source
+            self.__sources.append(source)
+
+    def verify(self):
+        self.__ensure_required_keys()
+        return self
 
     def set_env(self, key, value):
         """Sets environment variables by prepending the app_name to `key`. Also registers the
@@ -107,13 +123,14 @@ class Configuration(object):
         self._registered_env_keys.discard(key)
         self._clear_memoization()
 
-    def reload(self, force=False):
+    def _reload(self, force=False):
         """Reloads the configuration from the file and environment variables. Useful if using
         `os.environ` instead of this class' `set_env` method, or if the underlying configuration
         file is changed externally.
         """
         self._config_map = dict()
-        self.__load_sources()
+        self._registered_env_keys = set()
+        self.__reload_sources(force)
         self.__load_environment_keys()
         self.__ensure_required_keys()
         self._clear_memoization()
@@ -125,7 +142,10 @@ class Configuration(object):
             from_sources = self._config_map.get(key, None)
             return typify(from_env, type(from_sources) if from_sources is not None else None)
         else:
-            return self._config_map[key]
+            try:
+                return self._config_map[key]
+            except KeyError as e:
+                raise NotFoundError(e.message)
 
     def __getattr__(self, key):
         return self[key]
@@ -147,12 +167,29 @@ class Configuration(object):
         for key in self:
             yield key, self[key]
 
-    def __load_sources(self):
-        for source in self.__sources:
-            self._config_map.update(source.dump())
+    def __load_source(self, source, force_reload=False):
+        if force_reload and source.parent_source:
+            return
+
+        items = source.dump(force_reload)
+        if source.provides and not set(source.provides).issubset(items):
+            raise
+
+        additional_requirements = items.pop('additional_requirements', None)
+        if isinstance(additional_requirements, basestring):
+            additional_requirements = additional_requirements.split(',')
+        self._required_keys |= set(listify(additional_requirements))
+
+        additional_sources = items.pop('additional_sources', None)
+
+        self._config_map.update(items)
+
+        if additional_sources:
+            for class_name, kwargs in additional_sources.items():
+                additional_source = getattr(globals(), class_name)(**kwargs)
+                self.append_sources(additional_source, source)
 
     def __load_environment_keys(self):
-        self._registered_env_keys = set()
         app_prefix = self.app_name.upper() + '_'
         for env_key in os.environ:
             if env_key.startswith(app_prefix):
@@ -176,30 +213,64 @@ class Configuration(object):
 class Source(object):
     _items = None
     _provides = None
+    _parent_source = None
 
     @property
     def provides(self):
         return self._provides
 
+    @property
+    def items(self):
+        return self.dump()
+
     def load(self):
+        """Must return a key, value dict"""
         raise NotImplementedError()  # pragma: no cover
 
     def dump(self, force_reload=False):
         if self._items is None or force_reload:
-            self.load()
+            self._items = self.load()
         return self._items
+
+    @property
+    def parent_config(self):
+        return self._parent_config
+
+    @parent_config.setter
+    def parent_config(self, parent_config):
+        self._parent_config = parent_config
+
+    @property
+    def parent_source(self):
+        return self._parent_source
+
+    @parent_source.setter
+    def parent_source(self, parent_source):
+        self._parent_source = parent_source
 
 
 class YamlSource(Source):
 
-    def __init__(self, location, provides, package_name=None):
+    def __init__(self, location, package_name=None, provides=None):
         self._location = location
         self._package_name = package_name
+        self._provides = provides if provides else None
+
+    def load(self):
+        with PackageFile(self._location, self._package_name
+                                         or self.parent_config.package) as fh:
+            import yaml
+            contents = yaml.load(fh)
+            if self.provides is None:
+                return contents
+            else:
+                return {key: contents[key] for key in self.provides}
+
+
+class EnvironmentSource(Source):
+
+    def __init__(self, provides):
         self._provides = provides
 
     def load(self):
-        with PackageFile(self._location, self._package_name) as fh:
-            import yaml
-            contents = yaml.load(fh)
-            self._items = {key: contents[key] for key in self.provides}
-
+        return {key: os.environ[key] for key in self.provides}

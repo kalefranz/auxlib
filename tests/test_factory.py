@@ -8,7 +8,7 @@ from auxlib.factory import Factory
 class AppContext(Configuration):
     pass
 
-appcontext = AppContext('foo')
+appcontext = AppContext('foo', __package__)
 
 class SomeFactory(Factory):
 

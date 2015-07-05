@@ -396,7 +396,7 @@ class Entity(object):
     def __eq__(self, other):
         if self.__class__ != other.__class__:
             return False
-        rando_default = 192837465647382910
+        rando_default = 19274656290
         return all(getattr(self, field, rando_default) == getattr(other, field, rando_default)
                    for field in self.__fields__)
 
