@@ -86,4 +86,5 @@ class Factory(object):
 # skip_registration
 # gateways
 # do_cache
-# factory
+
+# TODO: add name parameter

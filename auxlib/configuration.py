@@ -9,7 +9,7 @@ Features:
   * Accepts multiple config files
   * Can query information from consul
   * Does type coercion on strings
-  *
+  * Composable configs
 
 """
 import logging
@@ -84,8 +84,8 @@ class Configuration(object):
 
     """
 
-    def __init__(self, app_name, package, config_sources=None, required_parameters=None):
-        self.app_name = app_name
+    def __init__(self, appname, package, config_sources=None, required_parameters=None):
+        self.appname = appname
         self.package = package
         self.__initial_load = True
 
@@ -94,15 +94,22 @@ class Configuration(object):
         self._registered_env_keys = set()
         self._required_keys = set(listify(required_parameters))
 
-        self.append_sources(config_sources, force_reload=True)
         self.__load_environment_keys()
+        self.append_sources(config_sources)
 
-    def append_sources(self, config_sources, parent_source=None, force_reload=False):
+    def append_sources(self, config_sources):
+        force_reload = True
         for source in listify(config_sources):
-            source.parent_config = self
-            self.__load_source(source, force_reload)
-            source.parent_source = parent_source
-            self.__sources.append(source)
+            self.__append_source(source, force_reload)
+
+    def append_required(self, required_parameters):
+        self._required_keys.update(listify(required_parameters))
+
+    def __append_source(self, source, force_reload=False, _parent_source=None):
+        source.parent_config = self
+        self.__load_source(source, force_reload)
+        source.parent_source = _parent_source
+        self.__sources.append(source)
 
     def verify(self):
         self.__ensure_required_keys()
@@ -113,13 +120,13 @@ class Configuration(object):
         environment variable with the instance object preventing an otherwise-required call to
         `reload()`.
         """
-        os.environ[make_env_key(self.app_name, key)] = str(value)  # must coerce to string
+        os.environ[make_env_key(self.appname, key)] = str(value)  # must coerce to string
         self._registered_env_keys.add(key)
         self._clear_memoization()
 
     def unset_env(self, key):
         """Removes an environment variable using the prepended app_name convention with `key`."""
-        os.environ.pop(make_env_key(self.app_name, key), None)
+        os.environ.pop(make_env_key(self.appname, key), None)
         self._registered_env_keys.discard(key)
         self._clear_memoization()
 
@@ -132,13 +139,13 @@ class Configuration(object):
         self._registered_env_keys = set()
         self.__reload_sources(force)
         self.__load_environment_keys()
-        self.__ensure_required_keys()
+        self.verify()
         self._clear_memoization()
 
     @memoizemethod  # memoized for performance; always use self.set_env() instead of os.setenv()
     def __getitem__(self, key):
         if key in self._registered_env_keys:
-            from_env = os.getenv(make_env_key(self.app_name, key))
+            from_env = os.getenv(make_env_key(self.appname, key))
             from_sources = self._config_map.get(key, None)
             return typify(from_env, type(from_sources) if from_sources is not None else None)
         else:
@@ -169,11 +176,12 @@ class Configuration(object):
 
     def __load_source(self, source, force_reload=False):
         if force_reload and source.parent_source:
+            # TODO: double-check case of reload without force reload for chained configs
             return
 
         items = source.dump(force_reload)
         if source.provides and not set(source.provides).issubset(items):
-            raise
+            raise NotImplementedError()  # TODO: fix this
 
         additional_requirements = items.pop('additional_requirements', None)
         if isinstance(additional_requirements, basestring):
@@ -185,15 +193,16 @@ class Configuration(object):
         self._config_map.update(items)
 
         if additional_sources:
-            for class_name, kwargs in additional_sources.items():
-                additional_source = getattr(globals(), class_name)(**kwargs)
-                self.append_sources(additional_source, source)
+            for src in additional_sources:
+                class_name, kwargs = src.popitem()
+                additional_source = globals()[class_name](**kwargs)
+                self.__append_source(additional_source, force_reload, source)
 
     def __load_environment_keys(self):
-        app_prefix = self.app_name.upper() + '_'
+        app_prefix = self.appname.upper() + '_'
         for env_key in os.environ:
             if env_key.startswith(app_prefix):
-                self._registered_env_keys.add(reverse_env_key(self.app_name, env_key))
+                self._registered_env_keys.add(reverse_env_key(self.appname, env_key))
                 # We don't actually add values to _config_map here. Rather, they're pulled
                 # directly from os.environ at __getitem__ time. This allows for type casting
                 # environment variables if possible.
@@ -251,9 +260,9 @@ class Source(object):
 
 class YamlSource(Source):
 
-    def __init__(self, location, package_name=None, provides=None):
+    def __init__(self, location, packagename=None, provides=None):
         self._location = location
-        self._package_name = package_name
+        self._package_name = packagename
         self._provides = provides if provides else None
 
     def load(self):
@@ -267,10 +276,17 @@ class YamlSource(Source):
                 return {key: contents[key] for key in self.provides}
 
 
-class EnvironmentSource(Source):
+class EnvironmentMappedSource(Source):
 
-    def __init__(self, provides):
-        self._provides = provides
+    def __init__(self, envvar, sourcemap):
+        self._envvar = envvar
+        self._sourcemap = sourcemap
 
     def load(self):
-        return {key: os.environ[key] for key in self.provides}
+        mapped_source = self._sourcemap[self.parent_config[self._envvar]]
+        mapped_source.parent_config = self.parent_config
+        params = mapped_source.load()
+        print self._envvar, params
+        log.error(self._envvar)
+        log.error(params)
+        return params
