@@ -59,6 +59,16 @@ Behaviors:
 
 
 
+Fields are doing something very similar to boxing and unboxing
+of java primitives.  __set__ should take a "primitve" or "raw" value and create a "boxed"
+or "programatically useable" value of it.  While __get__ should return the boxed value,
+dump in turn should unbox the value into a primitive or raw value.
+
+The process of boxing a complex object of nested primitive values:
+
+
+ComposableField uses another Entity as its type.
+
 
 
 
@@ -83,6 +93,7 @@ Examples:
     [('color', 0), ('weight', 44.4)]
 
 """
+import collections
 import datetime
 import logging
 
@@ -91,7 +102,7 @@ from enum import Enum
 
 from auxlib.exceptions import ValidationError, Raise, ThisShouldNeverHappenError
 from auxlib.collection import AttrDict
-
+from auxlib.type_coercion import maybecall
 
 log = logging.getLogger(__name__)
 
@@ -111,13 +122,13 @@ class Field(object):
     """
 
     def __init__(self, default=None, required=True, validation=None, in_dump=True, nullable=False):
-        self._default = default
+        self._default = default if callable(default) else self.box(default)
         self._required = required
         self._validation = validation
         self._in_dump = in_dump
         self._nullable = nullable
         if default is not None:
-            self.validate(default() if callable(default) else default)
+            self.validate(self.box(maybecall(default)))
 
     @property
     def name(self):
@@ -135,29 +146,34 @@ class Field(object):
     def __get__(self, instance, instance_type):
         try:
             if instance is None:  # if calling from the class object
-                return getattr(instance_type, KEY_OVERRIDES_MAP)[self.name]
-            return instance.__dict__[self.name]
+                val = getattr(instance_type, KEY_OVERRIDES_MAP)[self.name]
+            else:
+                val = instance.__dict__[self.name]
         except AttributeError:
             log.error("The name attribute has not been set for this field.")
             raise
         except KeyError:
             if self.default is not None:
-                # default *can* be a callable
-                val = self.default
-                return val() if callable(val) else val
+                val = maybecall(self.default)  # default *can* be a callable
             elif self._nullable:
                 return None
             else:
                 raise AttributeError("A value for {} has not been set".format(self.name))
+        return self.unbox(val)
 
     def __set__(self, instance, val):
         # validate will raise an exception if invalid
         # validate will return False if the value should be removed
-        self.validate(val)
-        instance.__dict__[self.name] = val
+        instance.__dict__[self.name] = self.validate(self.box(val))
 
     def __delete__(self, instance):
         instance.__dict__.pop(self.name, None)
+
+    def box(self, val):
+        return val
+
+    def unbox(self, val):
+        return val
 
     def validate(self, val):
         """
@@ -171,9 +187,9 @@ class Field(object):
         # note here calling, but not assigning; could lead to unexpected behavior
         if isinstance(val, self._type):
             if self._validation is None or self._validation(val):
-                return True
+                return val
         elif val is None and self.nullable:
-            return True
+            return val
         raise ValidationError(getattr(self, 'name', 'undefined name'), val)
 
     @property
@@ -216,22 +232,14 @@ class NumberField(Field):
 class DateField(Field):
     _type = datetime.datetime
 
-    def __init__(self, default=None, required=True, validation=None, in_dump=True, nullable=False):
-        super(DateField, self).__init__(self._pre_convert(default), required, validation,
-                                        in_dump, nullable)
-
-    def __get__(self, obj, objtype):
-        val = super(DateField, self).__get__(obj, objtype)
-        return None if val is None else val.isoformat()
-
-    def __set__(self, obj, val):
+    def box(self, val):
         try:
-            super(DateField, self).__set__(obj, self._pre_convert(val))
-        except (ValueError, AttributeError):
-            raise ValidationError(self.name, val, self._type)
+            return dateutil.parser.parse(val) if isinstance(val, basestring) else val
+        except ValueError as e:
+            raise ValidationError(val, msg=e.message)
 
-    def _pre_convert(self, val):
-        return dateutil.parser.parse(val) if isinstance(val, basestring) else val
+    def unbox(self, val):
+        return None if val is None else val.isoformat()
 
 
 class EnumField(Field):
@@ -239,23 +247,18 @@ class EnumField(Field):
     def __init__(self, enum_class, default=None, required=True, validation=None,
                  in_dump=True, nullable=False):
         self._type = enum_class
-        super(EnumField, self).__init__(self._pre_convert(default), required, validation,
-                                        in_dump, nullable)
+        super(self.__class__, self).__init__(default, required, validation, in_dump, nullable)
 
-    def __get__(self, obj, objtype):
-        val = super(EnumField, self).__get__(obj, objtype)
-        return None if val is None else val.value
-
-    def __set__(self, obj, val):
-        try:
-            super(EnumField, self).__set__(obj, self._pre_convert(val))
-        except ValueError:
-            raise ValidationError(self.name, val, self._type)
-
-    def _pre_convert(self, val):
+    def box(self, val):
         if val is None:
-            return val
-        return val if isinstance(val, self._type) else self._type(val)
+            return None
+        try:
+            return val if isinstance(val, self._type) else self._type(val)
+        except ValueError as e:
+            raise ValidationError(val, msg=e.message)
+
+    def unbox(self, val):
+        return None if val is None else val.value
 
 
 class ListField(Field):
@@ -264,24 +267,44 @@ class ListField(Field):
     def __init__(self, element_type, default=None, required=True, validation=None,
                  in_dump=True, nullable=False):
         self._element_type = element_type
-        super(ListField, self).__init__(self._pre_convert(default), required, validation,
-                                        in_dump, nullable)
+        super(self.__class__, self).__init__(default, required, validation, in_dump, nullable)
 
-    def __set__(self, obj, val):
-        super(ListField, self).__set__(obj, self._pre_convert(val))
-
-    def __get__(self, obj, objtype):
-        val = super(ListField, self).__get__(obj, objtype)
-        return tuple() if val is None else val
-
-    def _pre_convert(self, val):
+    def box(self, val):
         if val is None:
             return None
+        elif isinstance(val, collections.Iterable):
+            return tuple(val)
         else:
+            raise ValidationError(val, msg="Cannot assign a non-iterable value to "
+                                           "{}".format(self.name))
+
+    def unbox(self, val):
+        return tuple() if val is None else val
+
+    def validate(self, val):
+        if val is None:
+            if not self.nullable:
+                raise ValidationError(self.name, val)
+            return None
+        else:
+            val = super(self.__class__, self).validate(val)
             et = self._element_type
-            return tuple(el if isinstance(el, et)
-                         else Raise(ValidationError(self.name, el, et))
-                         for el in val)
+            tuple(Raise(ValidationError(self.name, el, et)) for el in val
+                  if not isinstance(el, et))
+            return val
+
+
+class ComposableField(Field):
+
+    def __init__(self, field_class, default=None, required=True, validation=None,
+                 in_dump=True, nullable=False):
+        self._type = field_class
+        super(self.__class__, self).__init__(default, required, validation, in_dump, nullable)
+
+    def box(self, val):
+        if val is None:
+            return None
+        return val if isinstance(val, self._type) else self._type(**val)
 
 
 class EntityType(type):
@@ -357,6 +380,7 @@ class Entity(object):
         return cls(**data_dict)
 
     def validate(self):
+        # TODO: here, validate should only have to determine if the required keys are set
         try:
             reduce(lambda x, y: y, (getattr(self, name)
                                     for name, field in self.__fields__.items()
@@ -381,7 +405,7 @@ class Entity(object):
         pass
 
     def dump(self):
-        return {field.name: value
+        return {field.name: _maybe_dump(value)
                 for field, value in ((field, getattr(self, field.name, None))
                                      for field in self.__dump_fields())
                 if value is not None or field.nullable}
@@ -403,6 +427,9 @@ class Entity(object):
     def __hash__(self):
         return sum(hash(getattr(self, field, None)) for field in self.__fields__)
 
+
+def _maybe_dump(value):
+    return value.dump() if isinstance(value, Entity) else value
 
 def find_or_none(key, search_maps, map_index=0):
     """Return the value of the first key found in the list of search_maps,

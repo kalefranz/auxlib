@@ -101,3 +101,7 @@ def typify(value, type_hint=None):
 
     # nothing has caught so far; give up, and return the value that was given
     return value
+
+
+def maybecall(value):
+    return value() if callable(value) else value
