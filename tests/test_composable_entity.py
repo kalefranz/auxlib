@@ -4,7 +4,7 @@ import logging
 from enum import Enum
 import testtools
 
-from auxlib.entity import Entity, StringField, ComposableField, EnumField
+from auxlib.entity import Entity, StringField, ComposableField, EnumField, ListField
 
 log = logging.getLogger(__name__)
 
@@ -71,8 +71,23 @@ json_string_simple = """
 }
 """
 
+json_string_simple_list = """
+{
+  "parents": [
+    {
+      "hash": "e0d0c2041e09746be5ce4b55067d5a8e3098c843",
+      "type": "commit"
+    },
+    {
+      "hash": "e0d0c2041e09746be5ce4b55061029384756beef",
+      "type": "tag"
+    }
+  ]
+}
+"""
 class CommitType(Enum):
     COMMIT = "commit"
+    TAG = "tag"
 
 
 class Commit(Entity):
@@ -87,6 +102,10 @@ class Simple(Entity):
     parent = ComposableField(Commit)
 
 
+class SimpleList(Entity):
+    parents = ListField(Commit)
+
+
 class ClassFieldTests(testtools.TestCase):
 
     def test_most_simplest(self):
@@ -97,5 +116,20 @@ class ClassFieldTests(testtools.TestCase):
         assert simple.parent.hash == "e0d0c2041e09746be5ce4b55067d5a8e3098c843"
         assert simple.parent.type == CommitType.COMMIT.value
 
+        print json.dumps(simple.dump())
+
+        assert simple == Simple(**obj_dict)
+        assert Simple(**simple.dump()) == Simple(**obj_dict)
+
     def test_simple_list(self):
-        pass
+        obj_dict = json.loads(json_string_simple_list)
+        simplelist = SimpleList(**obj_dict)
+
+        assert len(simplelist.parents) == 2
+
+        assert simplelist == SimpleList(**obj_dict)
+
+        print simplelist.dump()
+        print json.dumps(simplelist.dump())
+
+        assert SimpleList(**simplelist.dump()) == SimpleList(**obj_dict)

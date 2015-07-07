@@ -273,7 +273,11 @@ class ListField(Field):
         if val is None:
             return None
         elif isinstance(val, collections.Iterable):
-            return tuple(val)
+            et = self._element_type
+            if isinstance(et, type) and issubclass(et, Entity):
+                return tuple(et(**v) for v in val)
+            else:
+                return tuple(val)
         else:
             raise ValidationError(val, msg="Cannot assign a non-iterable value to "
                                            "{}".format(self.name))
@@ -405,7 +409,7 @@ class Entity(object):
         pass
 
     def dump(self):
-        return {field.name: _maybe_dump(value)
+        return {field.name: _maybe_dump(value, field)
                 for field, value in ((field, getattr(self, field.name, None))
                                      for field in self.__dump_fields())
                 if value is not None or field.nullable}
@@ -428,8 +432,15 @@ class Entity(object):
         return sum(hash(getattr(self, field, None)) for field in self.__fields__)
 
 
-def _maybe_dump(value):
-    return value.dump() if isinstance(value, Entity) else value
+def _maybe_dump(value, field):
+    if isinstance(value, Entity):
+        return value.dump()
+    elif (isinstance(value, collections.Iterable)
+          and hasattr(field, '_element_type')
+          and issubclass(field._element_type, Entity)):
+        return tuple(v.dump() for v in value)
+    else:
+        return value
 
 def find_or_none(key, search_maps, map_index=0):
     """Return the value of the first key found in the list of search_maps,
