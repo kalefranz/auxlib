@@ -3,7 +3,7 @@ import logging
 
 from testtools import TestCase
 
-from auxlib import logconfig
+from auxlib import logz
 from auxlib.path import open_package_file, PackageFile
 
 log = logging.getLogger(__name__)
@@ -13,14 +13,14 @@ class PathTests(TestCase):
 
     @classmethod
     def setUpClass(cls):
-        logconfig.set_root_level(logging.INFO)
-        logconfig.attach_stderr(logging.DEBUG)
-        assert not logconfig.attach_stderr()
+        logz.set_root_level(logging.INFO)
+        logz.attach_stderr(logging.DEBUG)
+        assert not logz.attach_stderr()
 
     @classmethod
     def tearDownClass(self):
-        logconfig.detach_stderr()
-        assert not logconfig.detach_stderr()
+        logz.detach_stderr()
+        assert not logz.detach_stderr()
 
     def test_find_real_file(self):
         fh = open_package_file('requirements/test.txt', None)

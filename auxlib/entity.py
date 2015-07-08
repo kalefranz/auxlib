@@ -5,6 +5,14 @@ This module has many of the same motivations as the python Marshmallow package.
 <http://marshmallow.readthedocs.org/en/latest/why.html>
 
 
+This module gives us:
+  - type safety
+  - custom field validation
+  - serialization and deserialization
+  - rock solid foundational domain objects
+
+
+
 
 Optional Field Properties:
   - validation = None

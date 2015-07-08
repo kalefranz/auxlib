@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import json
 import logging
 import sys
 
@@ -51,3 +52,16 @@ def initialize_logging(level=logging.INFO):
     ch.setFormatter(formatter)
     rootlogger.addHandler(ch)
     applogger.addHandler(ch)
+
+
+class DumpEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if hasattr(obj, 'dump'):
+            return obj.dump()
+        # Let the base class default method raise the TypeError
+        return json.JSONEncoder.default(self, obj)
+_DUMPS = DumpEncoder(indent=2, ensure_ascii=False, sort_keys=True).encode
+
+
+def jsondumps(obj):
+    return _DUMPS(obj)

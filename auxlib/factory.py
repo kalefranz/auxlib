@@ -87,4 +87,4 @@ class Factory(object):
 # gateways
 # do_cache
 
-# TODO: add name parameter
+# TODO: add name parameter  --give example from transcomm client factory
