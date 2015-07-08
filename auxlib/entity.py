@@ -108,7 +108,6 @@ log = logging.getLogger(__name__)
 
 KEY_OVERRIDES_MAP = "__key_overrides__"
 
-
 class Field(object):
     """
 
@@ -227,6 +226,13 @@ class StringField(Field):
 
 class NumberField(Field):
     _type = (int, long, float, complex)
+
+
+class BooleanField(Field):
+    _type = bool
+
+    def box(self, val):
+        return None if val is None else bool(val)
 
 
 class DateField(Field):

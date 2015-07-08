@@ -1,4 +1,4 @@
 #!/bin/bash -eu
 
 cd "${1:-.}"
-find . -name "*.pyc" -delete
+find . -name \*.py[co] -delete

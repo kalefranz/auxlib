@@ -128,8 +128,4 @@ class ClassFieldTests(testtools.TestCase):
         assert len(simplelist.parents) == 2
 
         assert simplelist == SimpleList(**obj_dict)
-
-        print simplelist.dump()
-        print json.dumps(simplelist.dump())
-
         assert SimpleList(**simplelist.dump()) == SimpleList(**obj_dict)
