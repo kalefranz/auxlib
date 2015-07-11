@@ -65,3 +65,21 @@ _DUMPS = DumpEncoder(indent=2, ensure_ascii=False, sort_keys=True).encode
 
 def jsondumps(obj):
     return _DUMPS(obj)
+
+
+def fullname(object):
+  return object.__module__ + "." + object.__class__.__name__
+
+
+def stringify(object):
+    name = fullname(object)
+    if name == 'bottle.request':
+        builder = list()
+        builder.append("{0} {1}{2} {3}".format(object.method,
+                                               object.path,
+                                               object.environ.get('QUERY_STRING', ''),
+                                               object.get('SERVER_PROTOCOL')))
+        builder += ["{0}: {1}".format(key, value) for key, value in object.headers.items()]
+        builder.append('')
+        builder.append(object.body.read())
+        return "\n".join(builder)

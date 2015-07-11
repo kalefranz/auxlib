@@ -103,6 +103,7 @@ Examples:
 """
 import collections
 import datetime
+import json
 import logging
 
 import dateutil.parser
@@ -252,9 +253,6 @@ class DateField(Field):
         except ValueError as e:
             raise ValidationError(val, msg=e.message)
 
-    def unbox(self, val):
-        return None if val is None else val.isoformat()
-
 
 class EnumField(Field):
 
@@ -394,6 +392,10 @@ class Entity(object):
         return cls(**init_vars)
 
     @classmethod
+    def from_json(cls, json_str):
+        return cls(**json.loads(json_str))
+
+    @classmethod
     def load(cls, data_dict):
         return cls(**data_dict)
 
@@ -453,6 +455,8 @@ def _maybe_dump(value, field):
           and hasattr(field, '_element_type')
           and issubclass(field._element_type, Entity)):
         return tuple(v.dump() for v in value)
+    elif isinstance(value, datetime.datetime):
+        return value.isoformat()
     else:
         return value
 
