@@ -512,27 +512,27 @@ class DateFieldTests(TestCase):
 
     def test_assignment(self):
         df = DateEntity(field=NOW.isoformat())
-        assert df.field == NOW.isoformat()
-        assert df.field_w_default == NOW.isoformat()
-        assert df.field_w_default_w_validation == NOW.isoformat()
+        assert df.field == NOW
+        assert df.field_w_default == NOW
+        assert df.field_w_default_w_validation == NOW
 
         new_now = datetime.datetime.now()
         df.field = new_now
         df.field_w_default = new_now
         df.field_w_default_w_validation = new_now
 
-        assert df.field == new_now.isoformat()
-        assert df.field_w_default == new_now.isoformat()
-        assert df.field_w_default_w_validation == new_now.isoformat()
+        assert df.field == new_now
+        assert df.field_w_default == new_now
+        assert df.field_w_default_w_validation == new_now
 
         now_now = datetime.datetime.now()
         df.field = now_now
         df.field_w_default = now_now
         df.field_w_default_w_validation = now_now
 
-        assert df.field == now_now.isoformat()
-        assert df.field_w_default == now_now.isoformat()
-        assert df.field_w_default_w_validation == now_now.isoformat()
+        assert df.field == now_now
+        assert df.field_w_default == now_now
+        assert df.field_w_default_w_validation == now_now
 
     def test_assignment_error(self):
         df = DateEntity(field=NOW.isoformat())
@@ -551,11 +551,11 @@ class DateFieldTests(TestCase):
 
     def test_callable_values(self):
         de = DateEntity(field=NOW)
-        assert isinstance(de.field, basestring)
-        assert de.field == NOW.isoformat()
-        assert isinstance(de.field_w_default_callable, basestring)
-        assert (dateutil.parser.parse(de.field_w_default_callable)
-                < dateutil.parser.parse(de.field_w_default_callable))
+        assert isinstance(de.field, datetime.datetime)
+        assert de.field == NOW
+        assert isinstance(de.field_w_default_callable, datetime.datetime)
+        assert (dateutil.parser.parse(de.field_w_default_callable.isoformat())
+                < dateutil.parser.parse(de.field_w_default_callable.isoformat()))
 
     def test_nullable_field(self):
         de = DateEntity(field=NOW)
@@ -566,7 +566,7 @@ class DateFieldTests(TestCase):
             de.field = None
 
         de.field_wo_required_w_nullable = NOW
-        assert de.field_wo_required_w_nullable == NOW.isoformat()
+        assert de.field_wo_required_w_nullable == NOW
 
         de.field_wo_required_w_nullable = None
         assert de.field_wo_required_w_nullable == None
