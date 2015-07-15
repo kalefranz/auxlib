@@ -4,6 +4,10 @@ domain objects.
 This module has many of the same motivations as the python Marshmallow package.
 <http://marshmallow.readthedocs.org/en/latest/why.html>
 
+Also need to be explicit in explaining what Marshmallow doesn't do, and why this module is needed.
+  - Provides type safety like an ORM. And like an ORM, all classes subclass Entity.
+  - Provides BUILT IN serialization and deserialization.  Marhmallow requires a lot of code
+    duplication.
 
 This module gives us:
   - type safety

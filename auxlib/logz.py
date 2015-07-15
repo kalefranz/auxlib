@@ -42,16 +42,17 @@ def detach_stderr():
 def initialize_logging(level=logging.INFO):
     rootlogger = logging.getLogger()
     rootlogger.setLevel(level)
-    applogger = logging.getLogger(APP_NAME)
-    applogger.setLevel(logging.DEBUG)
-    applogger.propagate = False
+
+    # applogger = logging.getLogger(APP_NAME)
+    # applogger.setLevel(logging.DEBUG)
+    # applogger.propagate = False
 
     ch = logging.StreamHandler(sys.stderr)
     ch.setLevel(logging.DEBUG)
 
-    ch.setFormatter(formatter)
+    ch.setFormatter(TWO_LINE_FORMATTER)
     rootlogger.addHandler(ch)
-    applogger.addHandler(ch)
+    # applogger.addHandler(ch)
 
 
 class DumpEncoder(json.JSONEncoder):
@@ -73,7 +74,7 @@ def fullname(object):
 
 def stringify(object):
     name = fullname(object)
-    if name == 'bottle.request':
+    if name.startswith('bottle.'):
         builder = list()
         builder.append("{0} {1}{2} {3}".format(object.method,
                                                object.path,
@@ -81,5 +82,7 @@ def stringify(object):
                                                object.get('SERVER_PROTOCOL')))
         builder += ["{0}: {1}".format(key, value) for key, value in object.headers.items()]
         builder.append('')
-        builder.append(object.body.read())
+        body = object.body.read().strip()
+        if body:
+            builder.append(body)
         return "\n".join(builder)
