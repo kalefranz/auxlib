@@ -8,9 +8,9 @@ log = logging.getLogger(__name__)
 root_log = logging.getLogger()
 
 
-TWO_LINE_FORMATTER = logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - '
-                                       '%(funcName)s:%(lineno)d\n'
-                                       '%(message)s')
+TWO_LINE_FORMATTER = logging.Formatter('%(levelname)s - %(asctime)s.%(msecs)03d - %(process)d'
+                                       ' - %(name)s:%(funcName)s [%(lineno)d]\n'
+                                       '%(message)s', "%Y-%m-%d %H:%M:%S")
 
 
 def set_root_level(level=logging.INFO):
@@ -43,16 +43,11 @@ def initialize_logging(level=logging.INFO):
     rootlogger = logging.getLogger()
     rootlogger.setLevel(level)
 
-    # applogger = logging.getLogger(APP_NAME)
-    # applogger.setLevel(logging.DEBUG)
-    # applogger.propagate = False
-
     ch = logging.StreamHandler(sys.stderr)
     ch.setLevel(logging.DEBUG)
 
     ch.setFormatter(TWO_LINE_FORMATTER)
     rootlogger.addHandler(ch)
-    # applogger.addHandler(ch)
 
 
 class DumpEncoder(json.JSONEncoder):
@@ -85,4 +80,6 @@ def stringify(object):
         body = object.body.read().strip()
         if body:
             builder.append(body)
+            builder.append('')
+        builder.append('')
         return "\n".join(builder)
