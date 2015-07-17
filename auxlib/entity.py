@@ -324,7 +324,16 @@ class ComposableField(Field):
     def box(self, val):
         if val is None:
             return None
-        return val if isinstance(val, self._type) else self._type(**val)
+        if isinstance(val, self._type):
+            return val
+        else:
+            # assuming val is a dict now
+            try:
+                # if there is a key named 'self', have to rename it
+                val['slf'] = val.pop('self')
+            except KeyError:
+                pass  # no key of 'self', so no worries
+            return val if isinstance(val, self._type) else self._type(**val)
 
 
 class EntityType(type):

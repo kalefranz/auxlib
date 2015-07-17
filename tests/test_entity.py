@@ -613,4 +613,3 @@ class ListFieldTests(TestCase):
         assert not hasattr(le, 'field_wo_required')
         with ExpectedException(AttributeError):
             le.field_wo_required
-
