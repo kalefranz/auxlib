@@ -386,7 +386,8 @@ class Entity(object):
                 elif not field.required or field.default is not None:
                     pass
                 else:
-                    raise ValidationError(key)
+                    raise ValidationError(key, msg="{} requires a {} field"
+                                                   "".format(self.__class__.__name__, key))
             except ValidationError:
                 if kwargs[key] is None and not field.required:
                     pass

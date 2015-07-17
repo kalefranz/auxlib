@@ -10,7 +10,8 @@ root_log = logging.getLogger()
 
 TWO_LINE_FORMATTER = logging.Formatter('%(levelname)s - %(asctime)s.%(msecs)03d - %(process)d'
                                        ' - %(name)s:%(funcName)s [%(lineno)d]\n'
-                                       '%(message)s', "%Y-%m-%d %H:%M:%S")
+                                       '%(message)s\n',
+                                       "%Y-%m-%d %H:%M:%S")
 
 
 def set_root_level(level=logging.INFO):
@@ -81,5 +82,4 @@ def stringify(object):
         if body:
             builder.append(body)
             builder.append('')
-        builder.append('')
         return "\n".join(builder)
