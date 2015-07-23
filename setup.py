@@ -43,7 +43,7 @@ setup(
     long_description=long_description,
     packages=find_packages(exclude=['tests', 'tests.*']),
     url=meta['homepage'],
-    version=packaging.get_version(),
+    version=auxlib.__version__,
     zip_safe=True,
     install_requires=packaging.requirements('default.txt'),
     setup_requires=packaging.requirements('setup.txt'),
