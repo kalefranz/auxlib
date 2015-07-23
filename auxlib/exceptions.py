@@ -12,6 +12,10 @@ class AuxlibError(object):
     """Mixin to identify exceptions associated with the auxlib package."""
 
 
+class AuthenticationError(AuxlibError, ValueError):
+    pass
+
+
 class NotFoundError(AuxlibError, KeyError):
     pass
 

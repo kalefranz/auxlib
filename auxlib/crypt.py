@@ -5,21 +5,29 @@ Information sources:
     - http://code.activestate.com/recipes/576980-authenticated-encryption-with-pycrypto/
 
 """
-
+# -*- coding: utf-8 -*-
 import base64
 import hashlib
 import hmac
+import logging
 import os
 
-from Crypto.Cipher import AES
+try:
+    from Crypto.Cipher import AES
+except ImportError:
+    logging.getLogger(__name__).error('auxlib.crypt is a pycrypto wrapper, '
+                                      'which is not installed in the current '
+                                      'environment.')
+    raise
+
+from auxlib.exceptions import AuthenticationError
+
+
+log = logging.getLogger(__name__)
 
 AES_KEY_SIZE = 32   # 32 byte key size ==> AES-256
 AES_BLOCK_SIZE = AES.block_size
 HMAC_SIG_SIZE = hashlib.sha256().digest_size
-
-
-class AuthenticationError(ValueError):
-    pass
 
 
 def encrypt(secret_key, data):

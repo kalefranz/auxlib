@@ -4,14 +4,15 @@ import logging
 import os
 import re
 import subprocess
+import pkg_resources
 
 log = logging.getLogger(__name__)
 
 
-def _get_version_from_pkg_info():
-    #pkg_info = pkg_resources.resource_string(auxlib.__name__, 'PKG-INFO')
-    pkg_info = open('PKG-INFO', 'r').read()
-    return re.search('^Version:\s+(\S+)', pkg_info, re.MULTILINE).group(1)
+def _get_version_from_pkg_info(package_name):
+    return pkg_resources.resource_string(package_name, '.version')
+    # pkg_info = open('PKG-INFO', 'r').read()
+    # return re.search('^Version:\s+(\S+)', pkg_info, re.MULTILINE).group(1)
 
 
 def _get_version_from_git_tag():
@@ -57,7 +58,7 @@ def is_git_repo(path):
         return os.path.isdir(os.path.join(path, '.git')) or is_git_repo(os.path.dirname(path))
 
 
-def get_version():
+def get_version(package_name):
     """Returns a version string for the current package, derived
     either from the SCM (git currently) or from PKG-INFO.
 
@@ -70,14 +71,15 @@ def get_version():
 
     """
 
-    if os.path.isfile('PKG-INFO'):
-        return _get_version_from_pkg_info()
-
     here = os.path.abspath(os.path.expanduser(os.path.dirname(__file__)))
     if is_git_repo(here):
         return _get_version_from_git_tag()
 
-    raise RuntimeError("Could not get package version (no .git or PKG-INFO)")
+    version_from_pkg = _get_version_from_pkg_info(package_name)
+    if version_from_pkg:
+        return version_from_pkg
+
+    raise RuntimeError("Could not get package version (no .git or .version file)")
 
 
 def strip_comments(l):
@@ -92,5 +94,5 @@ def requirements(*f):
         ) if r]
 
 
-if __name__ == "__main__":
-    print(get_version())
+# if __name__ == "__main__":
+#     print(get_version())
