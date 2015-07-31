@@ -44,6 +44,7 @@ setup(
     packages=find_packages(exclude=['tests', 'tests.*']),
     url=meta['homepage'],
     version=auxlib.__version__,
+    include_package_data = True,
     zip_safe=True,
     install_requires=packaging.requirements('default.txt'),
     setup_requires=packaging.requirements('setup.txt'),
