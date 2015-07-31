@@ -23,7 +23,4 @@ release: clean
 	#$(PYTHON) setup.py release
 
 
-
-
-
 .PHONY: clean release version

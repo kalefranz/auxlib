@@ -3,13 +3,14 @@ import os
 from ddt import ddt, unpack, data
 from testtools import TestCase, ExpectedException
 
+import auxlib.configuration
 from auxlib.configuration import make_env_key, Configuration, reverse_env_key, YamlSource
 from auxlib.exceptions import AssignmentError, NotFoundError
 from auxlib.type_coercion import typify
 
 
 APP_NAME = 'test'
-PACKAGE = __package__
+PACKAGE = auxlib.configuration.__package__
 data_document = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'sample_config.yml')
 
 
@@ -47,6 +48,9 @@ class UtilityTests(TestCase):
           ('00.001', True, bool))
     def test_typify_with_hint(self, value, result, hint):
         self.assertEqual(result, typify(value, hint))
+
+    def test_package_name(self):
+        assert PACKAGE == 'auxlib'
 
 
 @ddt

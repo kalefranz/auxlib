@@ -291,7 +291,7 @@ class ListField(Field):
         elif isinstance(val, collections.Iterable):
             et = self._element_type
             if isinstance(et, type) and issubclass(et, Entity):
-                return tuple(et(**v) for v in val)
+                return tuple(v if isinstance(v, et) else et(**v) for v in val)
             else:
                 return tuple(val)
         else:
@@ -386,8 +386,8 @@ class Entity(object):
                 elif not field.required or field.default is not None:
                     pass
                 else:
-                    raise ValidationError(key, msg="{} requires a {} field"
-                                                   "".format(self.__class__.__name__, key))
+                    raise ValidationError(key, msg="{} requires a {} field. Instantiated with {}"
+                                                   "".format(self.__class__.__name__, key, kwargs))
             except ValidationError:
                 if kwargs[key] is None and not field.required:
                     pass

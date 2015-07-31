@@ -3,15 +3,17 @@ import json
 import logging
 import sys
 
-
 log = logging.getLogger(__name__)
 root_log = logging.getLogger()
 
+DEBUG_FORMATTER = logging.Formatter(
+    "[%(levelname)s] [%(asctime)s.%(msecs)03d] pid%(process)d %(name)s:%(funcName)s(%(lineno)d):\n"
+    "%(message)s\n",
+    "%Y-%m-%d %H:%M:%S")
 
-TWO_LINE_FORMATTER = logging.Formatter('%(levelname)s - %(asctime)s.%(msecs)03d - %(process)d'
-                                       ' - %(name)s:%(funcName)s [%(lineno)d]\n'
-                                       '%(message)s\n',
-                                       "%Y-%m-%d %H:%M:%S")
+INFO_FORMATTER = logging.Formatter(
+    "[%(levelname)s] [%(asctime)s.%(msecs)03d] pid%(process)d %(name)s(%(lineno)d): %(message)s\n",
+    "%Y-%m-%d %H:%M:%S")
 
 
 def set_root_level(level=logging.INFO):
@@ -25,7 +27,7 @@ def attach_stderr(level=None):
         handler.name = 'stderr'
         if level is not None:
             handler.setLevel(level)
-        handler.setFormatter(TWO_LINE_FORMATTER)
+        handler.setFormatter(DEBUG_FORMATTER if level == logging.DEBUG else INFO_FORMATTER)
         root_log.addHandler(handler)
         return True
     else:
@@ -47,7 +49,7 @@ def initialize_logging(level=logging.INFO):
     ch = logging.StreamHandler(sys.stderr)
     ch.setLevel(logging.DEBUG)
 
-    ch.setFormatter(TWO_LINE_FORMATTER)
+    ch.setFormatter(DEBUG_FORMATTER if level == logging.DEBUG else INFO_FORMATTER)
     rootlogger.addHandler(ch)
 
 
@@ -65,7 +67,7 @@ def jsondumps(obj):
 
 
 def fullname(object):
-  return object.__module__ + "." + object.__class__.__name__
+    return object.__module__ + "." + object.__class__.__name__
 
 
 def stringify(object):

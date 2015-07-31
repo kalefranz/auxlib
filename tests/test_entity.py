@@ -6,9 +6,8 @@ import unittest
 
 from testtools import TestCase, ExpectedException
 
-from auxlib.exceptions import ValidationError
-
 from auxlib.entity import Entity, StringField, IntField, EnumField, ListField, DateField
+from auxlib.exceptions import ValidationError
 
 
 class Color(Enum):
