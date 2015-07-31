@@ -57,7 +57,7 @@ class EntityTests(unittest.TestCase):
         self.assertEqual('bazaar', se.string_field)
         self.assertEqual(28, se.integer_field)
         self.assertEqual('default', se.string_field_w_default)
-        self.assertEqual('b', se.enum_field)
+        self.assertEqual('b', se.enum_field.value)
 
     def test_derived_sample_entity(self):
         with ExpectedException(ValidationError):
@@ -130,13 +130,13 @@ class EntityTests(unittest.TestCase):
     def test_inherited_field_set_on_class(self):
         dse = DerivedSampleEntity(18, string_field_w_default='taxi', string_field='boo',
                                   integer_field=14)
-        assert dse.enum_field == ChooseOne.A.value
+        assert dse.enum_field.value == ChooseOne.A.value
 
         dse.enum_field = ChooseOne.B
-        assert dse.enum_field == ChooseOne.B.value
+        assert dse.enum_field == ChooseOne.B
 
         dse.enum_field = 'c'
-        assert dse.enum_field == ChooseOne.C.value
+        assert dse.enum_field.value == ChooseOne.C.value
 
     def test_inherited_field_set_on_instance_object(self):
         dse = DerivedSampleEntity(18, string_field_w_default='taxi', string_field='boo',
@@ -205,15 +205,15 @@ class EnumFieldTests(TestCase):
 
     def test_optionless_enum(self):
         ee = EnumEntity(enum_field=Color.Red)
-        assert ee.enum_field == 'red'
+        assert ee.enum_field.value == 'red'
 
     def test_assignment(self):
         ee = EnumEntity(enum_field=Color.Red)
-        assert ee.enum_field == 'red'
-        assert ee.enum_field_w_default == 3
-        assert ee.enum_field_w_default_wo_required == 'green'
-        assert ee.enum_field_w_xtra_validation == 2
-        assert ee.enum_field_wo_dump == 'black'
+        assert ee.enum_field == Color.Red
+        assert ee.enum_field_w_default == Number.Three
+        assert ee.enum_field_w_default_wo_required == Color.Green
+        assert ee.enum_field_w_xtra_validation == Number.Two
+        assert ee.enum_field_wo_dump == Color.Black
 
         ee.enum_field = 'blue'
         ee.enum_field_w_default = 2
@@ -221,11 +221,11 @@ class EnumFieldTests(TestCase):
         ee.enum_field_w_xtra_validation = 3
         ee.enum_field_wo_dump = 'red'
 
-        assert ee.enum_field == 'blue'
-        assert ee.enum_field_w_default == 2
-        assert ee.enum_field_w_default_wo_required == 'red'
-        assert ee.enum_field_w_xtra_validation == 3
-        assert ee.enum_field_wo_dump == 'red'
+        assert ee.enum_field.value == 'blue'
+        assert ee.enum_field_w_default.value == 2
+        assert ee.enum_field_w_default_wo_required.value == 'red'
+        assert ee.enum_field_w_xtra_validation.value == 3
+        assert ee.enum_field_wo_dump.value == 'red'
 
         ee.enum_field = Color.Black
         ee.enum_field_w_default = 0
@@ -233,27 +233,27 @@ class EnumFieldTests(TestCase):
         ee.enum_field_w_xtra_validation = 2
         ee.enum_field_wo_dump = Color.Black
 
-        assert ee.enum_field == 'black'
-        assert ee.enum_field_w_default == 0
-        assert ee.enum_field_w_default_wo_required == 'black'
-        assert ee.enum_field_w_xtra_validation == 2
-        assert ee.enum_field_wo_dump == 'black'
+        assert ee.enum_field == Color.Black
+        assert ee.enum_field_w_default == Number.Zero
+        assert ee.enum_field_w_default_wo_required == Color.Black
+        assert ee.enum_field_w_xtra_validation == Number.Two
+        assert ee.enum_field_wo_dump == Color.Black
 
         with ExpectedException(ValidationError):
             ee.enum_field_w_default_wo_required = None
 
         del ee.enum_field_w_default_wo_required
-        assert ee.enum_field_w_default_wo_required == 'green'
+        assert ee.enum_field_w_default_wo_required.value == 'green'
 
     def test_default(self):
         ee = EnumEntity(enum_field=Color.Red)
-        assert ee.enum_field_w_default == 3
-        assert ee.enum_field_w_default_wo_required == 'green'
+        assert ee.enum_field_w_default == Number.Three
+        assert ee.enum_field_w_default_wo_required.value == 'green'
 
         ee2 = EnumEntity(enum_field=Color.Red, enum_field_w_default=2,
                          enum_field_w_default_wo_required=Color.Blue)
-        assert ee2.enum_field_w_default == 2
-        assert ee2.enum_field_w_default_wo_required == 'blue'
+        assert ee2.enum_field_w_default == Number.Two
+        assert ee2.enum_field_w_default_wo_required == Color.Blue
 
     def test_required_throws_exception(self):
         with ExpectedException(ValidationError):
@@ -269,13 +269,13 @@ class EnumFieldTests(TestCase):
 
     def test_required(self):
         ee = EnumEntity(enum_field=Color.Red, enum_field_w_default_wo_required='red')
-        assert ee.enum_field == 'red'
-        assert ee.enum_field_w_default_wo_required == 'red'
+        assert ee.enum_field.value == 'red'
+        assert ee.enum_field_w_default_wo_required == Color.Red
 
         ee.enum_field = Color.Black
         ee.enum_field_w_default_wo_required = 'black'
-        assert ee.enum_field == 'black'
-        assert ee.enum_field_w_default_wo_required == 'black'
+        assert ee.enum_field == Color.Black
+        assert ee.enum_field_w_default_wo_required == Color.Black
 
         with ExpectedException(ValidationError):
             EnumEntity(enum_field_w_xtra_validation=Number.Four)
@@ -285,10 +285,10 @@ class EnumFieldTests(TestCase):
             EnumEntity(enum_field='purple')
 
         ee = EnumEntity(enum_field=Color.Red)
-        assert ee.enum_field_w_xtra_validation == 2
+        assert ee.enum_field_w_xtra_validation == Number.Two
 
         ee.enum_field_w_xtra_validation = 3
-        assert ee.enum_field_w_xtra_validation == 3
+        assert ee.enum_field_w_xtra_validation == Number.Three
 
         with ExpectedException(ValidationError):
             ee.enum_field_w_default = 'red'

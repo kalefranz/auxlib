@@ -100,7 +100,7 @@ Examples:
     >>> truck.wheels
     18
     >>> truck.color
-    0
+    <Color.blue: 0>
     >>> sorted(truck.dump().items())
     [('color', 0), ('weight', 44.4)]
 
@@ -187,6 +187,9 @@ class Field(object):
     def unbox(self, val):
         return val
 
+    def dump(self, val):
+        return val
+
     def validate(self, val):
         """
 
@@ -257,6 +260,9 @@ class DateField(Field):
         except ValueError as e:
             raise ValidationError(val, msg=e.message)
 
+    def dump(self, val):
+        return None if val is None else val.isoformat()
+
 
 class EnumField(Field):
 
@@ -273,7 +279,7 @@ class EnumField(Field):
         except ValueError as e:
             raise ValidationError(val, msg=e.message)
 
-    def unbox(self, val):
+    def dump(self, val):
         return None if val is None else val.value
 
 
@@ -300,6 +306,12 @@ class ListField(Field):
 
     def unbox(self, val):
         return tuple() if val is None else val
+
+    def dump(self, val):
+        if issubclass(self._element_type, Entity):
+            return tuple(v.dump() for v in val)
+        else:
+            return val
 
     def validate(self, val):
         if val is None:
@@ -334,6 +346,9 @@ class ComposableField(Field):
             except KeyError:
                 pass  # no key of 'self', so no worries
             return val if isinstance(val, self._type) else self._type(**val)
+
+    def dump(self, val):
+        return None if val is None else val.dump()
 
 
 class EntityType(type):
@@ -439,7 +454,7 @@ class Entity(object):
         pass
 
     def dump(self):
-        return {field.name: _maybe_dump(value, field)
+        return {field.name: field.dump(value)
                 for field, value in ((field, getattr(self, field.name, None))
                                      for field in self.__dump_fields())
                 if value is not None or field.nullable}
@@ -461,18 +476,6 @@ class Entity(object):
     def __hash__(self):
         return sum(hash(getattr(self, field, None)) for field in self.__fields__)
 
-
-def _maybe_dump(value, field):
-    if isinstance(value, Entity):
-        return value.dump()
-    elif (isinstance(value, collections.Iterable)
-          and hasattr(field, '_element_type')
-          and issubclass(field._element_type, Entity)):
-        return tuple(v.dump() for v in value)
-    elif isinstance(value, datetime.datetime):
-        return value.isoformat()
-    else:
-        return value
 
 def find_or_none(key, search_maps, map_index=0):
     """Return the value of the first key found in the list of search_maps,

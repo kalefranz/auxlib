@@ -114,7 +114,7 @@ class ClassFieldTests(testtools.TestCase):
         assert simple.actor == "User"
         assert isinstance(simple.parent, Commit)
         assert simple.parent.hash == "e0d0c2041e09746be5ce4b55067d5a8e3098c843"
-        assert simple.parent.type == CommitType.COMMIT.value
+        assert simple.parent.type == CommitType.COMMIT
 
         print json.dumps(simple.dump())
 
