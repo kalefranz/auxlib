@@ -7,12 +7,12 @@ log = logging.getLogger(__name__)
 root_log = logging.getLogger()
 
 DEBUG_FORMATTER = logging.Formatter(
-    "[%(levelname)s] [%(asctime)s.%(msecs)03d] pid%(process)d %(name)s:%(funcName)s(%(lineno)d):\n"
+    "[%(levelname)s] [%(asctime)s.%(msecs)03d] %(process)d %(name)s:%(funcName)s(%(lineno)d):\n"
     "%(message)s\n",
     "%Y-%m-%d %H:%M:%S")
 
 INFO_FORMATTER = logging.Formatter(
-    "[%(levelname)s] [%(asctime)s.%(msecs)03d] pid%(process)d %(name)s(%(lineno)d): %(message)s\n",
+    "[%(levelname)s] [%(asctime)s.%(msecs)03d] %(process)d %(name)s(%(lineno)d): %(message)s\n",
     "%Y-%m-%d %H:%M:%S")
 
 
@@ -85,3 +85,15 @@ def stringify(object):
             builder.append(body)
             builder.append('')
         return "\n".join(builder)
+    elif name == 'requests.PreparedRequest':
+        builder = list()
+        builder.append("{0} {1} {2}".format(object.method, object.path_url,
+                                            object.url.split(':')[0]))
+        builder += ["{0}: {1}".format(key, value) for key, value in object.headers().items()]
+        builder.append('')
+        if object.body:
+            builder.append(object.body)
+            builder.append('')
+        return "\n".join(builder)
+
+

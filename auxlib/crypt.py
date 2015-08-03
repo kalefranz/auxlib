@@ -22,7 +22,6 @@ except ImportError:
 
 from auxlib.exceptions import AuthenticationError
 
-
 log = logging.getLogger(__name__)
 
 AES_KEY_SIZE = 32   # 32 byte key size ==> AES-256

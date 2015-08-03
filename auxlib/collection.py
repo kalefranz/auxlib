@@ -19,23 +19,3 @@ class AttrDict(dict):
         self.__dict__ = self
 
 
-def listify(val):
-    """
-    Examples:
-        >>> listify('abc')
-        ['abc']
-        >>> listify(None)
-        []
-        >>> listify(False)
-        [False]
-        >>> listify(('a', 'b', 'c'))
-        ['a', 'b', 'c']
-    """
-    if val is None:
-        return []
-    elif isinstance(val, basestring):
-        return [val]
-    elif isinstance(val, collections.Iterable):
-        return list(val)
-    else:
-        return [val]

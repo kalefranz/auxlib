@@ -38,7 +38,10 @@ def _get_version_from_git_tag():
                 raise
 
     def _get_hash():
-        return subprocess.check_output(["git", "rev-parse", "HEAD"]).strip()[:7]
+        try:
+            return subprocess.check_output(["git", "rev-parse", "HEAD"]).strip()[:7]
+        except subprocess.CalledProcessError:
+            return
 
     tag = _get_most_recent_tag()
     m = re.match("(?P<xyz>\d+\.\d+\.\d+)(?:-(?P<dev>\d+)-(?P<hash>.+))?", tag)
