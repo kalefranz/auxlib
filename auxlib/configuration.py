@@ -15,7 +15,7 @@ Features:
 import logging
 import os
 
-from auxlib.collection import listify
+from auxlib.type_coercion import listify
 from auxlib.decorators import memoize, memoizemethod
 from auxlib.exceptions import AssignmentError, NotFoundError
 from auxlib.path import PackageFile
