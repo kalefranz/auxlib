@@ -1,4 +1,5 @@
 """Collection of functions to coerce conversion of types with an intelligent guess."""
+import collections
 import re
 
 from auxlib.decorators import memoize

@@ -1,5 +1,4 @@
 """Common collection classes."""
-import collections
 
 
 # http://stackoverflow.com/a/14620633/2127762
