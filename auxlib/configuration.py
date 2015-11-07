@@ -10,10 +10,23 @@ Features:
   * Can query information from consul
   * Does type coercion on strings
   * Composable configs
+  * Ordered merge: downstream configs will override upstream
+  * Reload from sources on SIGHUP
+
+Available source types:
+  * Environment variables
+  * Yaml file on file system
+  * Yaml file in S3
+  * Consul
+  * Hashicorp Vault
+
+Notes:
+  * Keys are case-insensitive.
 
 """
 import logging
 import os
+import signal
 
 from auxlib.type_coercion import listify
 from auxlib.decorators import memoize, memoizemethod
@@ -87,13 +100,24 @@ class Configuration(object):
     def __init__(self, appname, package, config_sources=None, required_parameters=None):
         self.appname = appname
         self.package = package
+
+        # A private flag used to indicate if sources are being loaded for the first time or are
+        # being reloaded.
         self.__initial_load = True
 
+        # The ordered list of sources from which to load key, value pairs.
         self.__sources = list()
+
+        # The object that holds the actual key, value pairs after they're loaded from sources.
+        # Keys are stored as all lower-case. Access by key is provided in a case-insensitive way.
         self._config_map = dict()
+
+        #
         self._registered_env_keys = set()
+
         self._required_keys = set(listify(required_parameters))
 
+        self.__set_up_sighup_handler()
         self.__load_environment_keys()
         self.append_sources(config_sources)
 
@@ -144,6 +168,7 @@ class Configuration(object):
 
     @memoizemethod  # memoized for performance; always use self.set_env() instead of os.setenv()
     def __getitem__(self, key):
+        key = key.lower()
         if key in self._registered_env_keys:
             from_env = os.getenv(make_env_key(self.appname, key))
             from_sources = self._config_map.get(key, None)
@@ -218,6 +243,17 @@ class Configuration(object):
     def _clear_memoization(self):
         self.__dict__.pop('_memoized_results', None)
 
+    def __set_up_sighup_handler(self):
+        def sighup_handler(signum, frame):
+            if signum != signal.SIGHUP:
+                return
+            self._reload(True)
+            if callable(self.__previous_sighup_handler):
+                self.__previous_sighup_handler(signum, frame)
+        self.__previous_sighup_handler = signal.getsignal(signal.SIGHUP)
+        signal.signal(signal.SIGHUP, sighup_handler)
+
+
 
 class Source(object):
     _items = None
@@ -258,7 +294,7 @@ class Source(object):
         self._parent_source = parent_source
 
 
-class YamlSource(Source):
+class LocalYamlSource(Source):
 
     def __init__(self, location, packagename=None, provides=None):
         self._location = location
@@ -266,8 +302,7 @@ class YamlSource(Source):
         self._provides = provides if provides else None
 
     def load(self):
-        with PackageFile(self._location, self._package_name
-                                         or self.parent_config.package) as fh:
+        with PackageFile(self._location, self._package_name or self.parent_config.package) as fh:
             import yaml
             contents = yaml.load(fh)
             if self.provides is None:
@@ -277,6 +312,7 @@ class YamlSource(Source):
 
 
 class EnvironmentMappedSource(Source):
+    """Load a full Source object given the value of an environment variable."""
 
     def __init__(self, envvar, sourcemap):
         self._envvar = envvar

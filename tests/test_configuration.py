@@ -4,7 +4,7 @@ from ddt import ddt, unpack, data
 from testtools import TestCase, ExpectedException
 
 import auxlib.configuration
-from auxlib.configuration import make_env_key, Configuration, reverse_env_key, YamlSource
+from auxlib.configuration import make_env_key, Configuration, reverse_env_key, LocalYamlSource
 from auxlib.exceptions import AssignmentError, NotFoundError
 from auxlib.type_coercion import typify
 
@@ -14,7 +14,7 @@ PACKAGE = auxlib.configuration.__package__
 data_document = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'sample_config.yml')
 
 
-yaml_source = YamlSource(location=data_document,
+yaml_source = LocalYamlSource(location=data_document,
                          provides=['new_param', 'foo', 'nonetype', 'bool1', 'bool2', 'bool3'])
 
 

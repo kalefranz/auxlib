@@ -113,13 +113,14 @@ import logging
 import dateutil.parser
 from enum import Enum
 
-from auxlib.exceptions import ValidationError, Raise, ThisShouldNeverHappenError
+from auxlib.exceptions import ValidationError, Raise
 from auxlib.collection import AttrDict
 from auxlib.type_coercion import maybecall
 
 log = logging.getLogger(__name__)
 
 KEY_OVERRIDES_MAP = "__key_overrides__"
+
 
 class Field(object):
     """
@@ -324,6 +325,10 @@ class ListField(Field):
             tuple(Raise(ValidationError(self.name, el, et)) for el in val
                   if not isinstance(el, et))
             return val
+
+
+class MapField(Field):
+    _type = dict
 
 
 class ComposableField(Field):
