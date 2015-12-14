@@ -4,7 +4,7 @@ from ddt import ddt, unpack, data
 from testtools import TestCase, ExpectedException
 
 import auxlib.configuration
-from auxlib.configuration import make_env_key, Configuration, reverse_env_key, LocalYamlSource
+from auxlib.configuration import make_env_key, Configuration, reverse_env_key, YamlSource
 from auxlib.exceptions import AssignmentError, NotFoundError
 from auxlib.type_coercion import typify
 
@@ -14,7 +14,7 @@ PACKAGE = auxlib.configuration.__package__
 data_document = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'sample_config.yml')
 
 
-yaml_source = LocalYamlSource(location=data_document,
+yaml_source = YamlSource(location=data_document,
                          provides=['new_param', 'foo', 'nonetype', 'bool1', 'bool2', 'bool3'])
 
 
@@ -64,7 +64,7 @@ class BasicConfigTests(TestCase):
         os.environ[make_env_key(APP_NAME, 'a_float')] = '55.555'
         os.environ[make_env_key(APP_NAME, 'a_none')] = 'none'
         os.environ[make_env_key(APP_NAME, 'just_a_string')] = 'what say you'
-        self.config = Configuration(APP_NAME, PACKAGE, yaml_source)
+        self.config = Configuration(APP_NAME, yaml_source)
 
     @unpack
     @data(('new_param', 42), ('foo', 'bar'), ('nonetype', None), ('bool1', True),
@@ -113,11 +113,11 @@ class BasicConfigTests(TestCase):
 
     def test_ensure_required_keys(self):
         required_keys = ('bool1', 'nonetype', )
-        self.config = Configuration(APP_NAME, PACKAGE, yaml_source, required_keys)
+        self.config = Configuration(APP_NAME, yaml_source, required_keys)
         required_keys += ('doesnt_exist', )
-        self.assertRaises(EnvironmentError, Configuration(APP_NAME, PACKAGE,yaml_source, required_keys).verify)
+        self.assertRaises(EnvironmentError, Configuration(APP_NAME, yaml_source, required_keys).verify)
         os.environ[make_env_key(APP_NAME, 'doesnt_exist')] = 'now it does'
-        self.config = Configuration(APP_NAME, PACKAGE, yaml_source, required_keys)
+        self.config = Configuration(APP_NAME, yaml_source, required_keys)
         self.assertEqual('now it does', self.config.doesnt_exist)
 
     def test_items(self):
@@ -128,7 +128,7 @@ class BasicConfigTests(TestCase):
             self.config['bool2'] = 'false'
 
     def test_config_no_sources(self):
-        config = Configuration(APP_NAME, PACKAGE)
+        config = Configuration(APP_NAME)
         assert config.foobaz is False
         assert config.zero == 0
         assert config.an_int == 55
@@ -149,7 +149,7 @@ class BasicConfigTests(TestCase):
     def test_config_no_sources_required_params(self):
         required_parameters = ('beta', 'theta')
         with ExpectedException(EnvironmentError):
-            Configuration(APP_NAME, PACKAGE, required_parameters=required_parameters).verify()
+            Configuration(APP_NAME, required_parameters=required_parameters).verify()
 
 
 

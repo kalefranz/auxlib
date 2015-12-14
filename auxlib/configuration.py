@@ -24,6 +24,7 @@ Notes:
   * Keys are case-insensitive.
 
 """
+import inspect
 import logging
 import os
 import signal
@@ -80,7 +81,7 @@ class Configuration(object):
         >>> for (key, value) in [('FOO_BAR', 22), ('FOO_BAZ', 'yes'), ('FOO_BANG', 'monkey')]:
         ...     os.environ[key] = str(value)
 
-        >>> context = Configuration('foo', __package__)
+        >>> context = Configuration('foo')
         >>> context.bar, type(context.bar)
         (22, <type 'int'>)
         >>> context['baz'], type(context['baz'])
@@ -88,7 +89,7 @@ class Configuration(object):
         >>> context.bang, type(context.bang)
         ('monkey', <type 'str'>)
 
-        >>> context = Configuration('foo', __package__, required_parameters=('bar', 'boink')).verify()
+        >>> context = Configuration('foo', required_parameters=('bar', 'boink')).verify()
         Traceback (most recent call last):
         ...
         EnvironmentError: Required key(s) not found in environment
@@ -97,9 +98,9 @@ class Configuration(object):
 
     """
 
-    def __init__(self, appname, package, config_sources=None, required_parameters=None):
+    def __init__(self, appname, config_sources=None, required_parameters=None):
         self.appname = appname
-        self.package = package
+        self.package = inspect.getmodule(self).__package__
 
         # A private flag used to indicate if sources are being loaded for the first time or are
         # being reloaded.
@@ -294,15 +295,14 @@ class Source(object):
         self._parent_source = parent_source
 
 
-class LocalYamlSource(Source):
+class YamlSource(Source):
 
-    def __init__(self, location, packagename=None, provides=None):
+    def __init__(self, location, provides=None):
         self._location = location
-        self._package_name = packagename
         self._provides = provides if provides else None
 
     def load(self):
-        with PackageFile(self._location, self._package_name or self.parent_config.package) as fh:
+        with PackageFile(self._location, self.parent_config.package) as fh:
             import yaml
             contents = yaml.load(fh)
             if self.provides is None:
