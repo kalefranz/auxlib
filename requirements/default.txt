@@ -1,3 +1,4 @@
 enum34
+pycrypto
 python-dateutil
 PyYAML

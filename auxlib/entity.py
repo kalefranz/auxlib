@@ -389,6 +389,10 @@ class EntityType(type):
         if hasattr(cls, '__register__'):
             cls.__register__()
 
+    @property
+    def fields(cls):
+        return cls.__fields__.keys()
+
 
 class Entity(object):
     __metaclass__ = EntityType
