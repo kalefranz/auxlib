@@ -322,7 +322,6 @@ class EnvironmentMappedSource(Source):
         mapped_source = self._sourcemap[self.parent_config[self._envvar]]
         mapped_source.parent_config = self.parent_config
         params = mapped_source.load()
-        print self._envvar, params
-        log.error(self._envvar)
-        log.error(params)
+        log.info(self._envvar)
+        log.info(params)
         return params
