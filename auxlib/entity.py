@@ -210,6 +210,10 @@ class Field(object):
 
     @property
     def required(self):
+        return self.is_required
+
+    @property
+    def is_required(self):
         return self._required
 
     @property
@@ -230,6 +234,10 @@ class Field(object):
 
     @property
     def nullable(self):
+        return self.is_nullable
+
+    @property
+    def is_nullable(self):
         return self._nullable
 
 
