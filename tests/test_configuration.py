@@ -1,7 +1,8 @@
 import os
+import unittest
 
 from ddt import ddt, unpack, data
-from testtools import TestCase, ExpectedException
+from testtools import TestCase
 
 import auxlib.configuration
 from auxlib.configuration import make_env_key, Configuration, reverse_env_key, YamlSource
@@ -54,7 +55,7 @@ class UtilityTests(TestCase):
 
 
 @ddt
-class BasicConfigTests(TestCase):
+class BasicConfigTests(unittest.TestCase):
 
     def setUp(self):
         super(BasicConfigTests, self).setUp()
@@ -83,11 +84,11 @@ class BasicConfigTests(TestCase):
         self.assertEqual(False, self.config.foobaz)
 
     def test_get_attr_not_exist(self):
-        with ExpectedException(NotFoundError):
+        with self.assertRaises(NotFoundError):
             self.config.not_a_key
 
     def test_get_item_not_exist(self):
-        with ExpectedException(NotFoundError):
+        with self.assertRaises(NotFoundError):
             self.config['not_a_key']
 
     def test_get_method(self):
@@ -124,7 +125,7 @@ class BasicConfigTests(TestCase):
         self.assertTrue({('a_none', None), ('bool1', True)}.issubset(set(self.config.items())))
 
     def test_assignment_lock(self):
-        with ExpectedException(AssignmentError):
+        with self.assertRaises(AssignmentError):
             self.config['bool2'] = 'false'
 
     def test_config_no_sources(self):
@@ -137,7 +138,7 @@ class BasicConfigTests(TestCase):
         assert config.just_a_string == 'what say you'
 
         config.unset_env('an_int')
-        with ExpectedException(NotFoundError):
+        with self.assertRaises(NotFoundError):
             assert config.an_int == 55
 
         config.set_env('this_key', 'that value')
@@ -148,7 +149,7 @@ class BasicConfigTests(TestCase):
 
     def test_config_no_sources_required_params(self):
         required_parameters = ('beta', 'theta')
-        with ExpectedException(EnvironmentError):
+        with self.assertRaises(EnvironmentError):
             Configuration(APP_NAME, required_parameters=required_parameters).verify()
 
 

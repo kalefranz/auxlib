@@ -6,6 +6,7 @@ import unittest
 
 from testtools import TestCase, ExpectedException
 
+from auxlib._vendor.six import string_types, integer_types
 from auxlib.entity import Entity, StringField, IntField, EnumField, ListField, DateField
 from auxlib.exceptions import ValidationError
 
@@ -572,8 +573,8 @@ class DateFieldTests(TestCase):
 
 
 class ListEntity(Entity):
-    field = ListField(basestring)
-    field_w_default = ListField((int, long), default=[42, 43])
+    field = ListField(string_types)
+    field_w_default = ListField(integer_types, default=[42, 43])
     field_wo_required = ListField(float, required=False)
 
 

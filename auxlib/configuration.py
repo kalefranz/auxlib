@@ -24,16 +24,18 @@ Notes:
   * Keys are case-insensitive.
 
 """
+from __future__ import absolute_import, division, print_function
 import inspect
 import logging
 import os
 import signal
 
-from auxlib.type_coercion import listify
-from auxlib.decorators import memoize, memoizemethod
-from auxlib.exceptions import AssignmentError, NotFoundError
-from auxlib.path import PackageFile
-from auxlib.type_coercion import typify
+from ._vendor.six import string_types
+from .type_coercion import listify
+from .decorators import memoize, memoizemethod
+from .exceptions import AssignmentError, NotFoundError
+from .path import PackageFile
+from .type_coercion import typify
 
 
 log = logging.getLogger(__name__)
@@ -82,19 +84,12 @@ class Configuration(object):
         ...     os.environ[key] = str(value)
 
         >>> context = Configuration('foo')
-        >>> context.bar, type(context.bar)
-        (22, <type 'int'>)
+        >>> context.bar, context.bar.__class__
+        (22, <... 'int'>)
         >>> context['baz'], type(context['baz'])
-        (True, <type 'bool'>)
+        (True, <... 'bool'>)
         >>> context.bang, type(context.bang)
-        ('monkey', <type 'str'>)
-
-        >>> context = Configuration('foo', required_parameters=('bar', 'boink')).verify()
-        Traceback (most recent call last):
-        ...
-        EnvironmentError: Required key(s) not found in environment
-          or configuration sources.
-          Missing Keys: ['boink']
+        ('monkey', <... 'str'>)
 
     """
 
@@ -178,7 +173,7 @@ class Configuration(object):
             try:
                 return self._config_map[key]
             except KeyError as e:
-                raise NotFoundError(e.message)
+                raise NotFoundError(e)
 
     def __getattr__(self, key):
         return self[key]
@@ -210,7 +205,7 @@ class Configuration(object):
             raise NotImplementedError()  # TODO: fix this
 
         additional_requirements = items.pop('additional_requirements', None)
-        if isinstance(additional_requirements, basestring):
+        if isinstance(additional_requirements, string_types):
             additional_requirements = additional_requirements.split(',')
         self._required_keys |= set(listify(additional_requirements))
 
@@ -322,6 +317,4 @@ class EnvironmentMappedSource(Source):
         mapped_source = self._sourcemap[self.parent_config[self._envvar]]
         mapped_source.parent_config = self.parent_config
         params = mapped_source.load()
-        log.info(self._envvar)
-        log.info(params)
         return params

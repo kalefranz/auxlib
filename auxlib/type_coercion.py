@@ -2,11 +2,13 @@
 import collections
 import re
 
-from auxlib.decorators import memoize
+from ._vendor.five import string
+from ._vendor.six import integer_types, string_types
+from .decorators import memoize
 
 
 BOOLISH = ("true", "yes", "on", "y")
-BOOLABLE_TYPES = (bool, int, long, float, complex, list, set, dict, tuple)
+BOOLABLE_TYPES = integer_types + (bool, float, complex, list, set, dict, tuple)
 
 RE_BOOLEAN_TRUE = re.compile(r'^true$|^yes$|^on$', re.IGNORECASE)
 RE_BOOLEAN_FALSE = re.compile(r'^false$|^no$|^off$', re.IGNORECASE)
@@ -48,7 +50,7 @@ def boolify(value):
     if isinstance(value, BOOLABLE_TYPES):
         return bool(value)
     # try to coerce string into number
-    val = unicode(value).strip().lower().replace('.', '', 1)
+    val = string(value).strip().lower().replace('.', '', 1)
     if val.isnumeric():
         return bool(float(val))
     elif val in BOOLISH:  # now look for truthy strings
@@ -84,7 +86,7 @@ def typify(value, type_hint=None):
 
     """
     # value must be a string, or there at least needs to be a type hint
-    if isinstance(value, basestring):
+    if isinstance(value, string_types):
         value = value.strip()
     elif type_hint is None:
         # can't do anything because value isn't a string and there' no type hint
@@ -122,7 +124,7 @@ def listify(val):
     """
     if val is None:
         return []
-    elif isinstance(val, basestring):
+    elif isinstance(val, string_types):
         return [val]
     elif isinstance(val, collections.Iterable):
         return list(val)

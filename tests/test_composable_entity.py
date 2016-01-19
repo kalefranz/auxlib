@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from __future__ import absolute_import, division, print_function
 import json
 import logging
 from enum import Enum
@@ -116,7 +117,7 @@ class ClassFieldTests(testtools.TestCase):
         assert simple.parent.hash == "e0d0c2041e09746be5ce4b55067d5a8e3098c843"
         assert simple.parent.type == CommitType.COMMIT
 
-        print json.dumps(simple.dump())
+        print(json.dumps(simple.dump()))
 
         assert simple == Simple(**obj_dict)
         assert Simple(**simple.dump()) == Simple(**obj_dict)

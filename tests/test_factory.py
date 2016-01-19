@@ -10,6 +10,7 @@ class AppContext(Configuration):
 
 appcontext = AppContext('foo', __package__)
 
+
 class SomeFactory(Factory):
 
     def do_something(self):

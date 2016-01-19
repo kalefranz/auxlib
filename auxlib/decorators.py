@@ -1,5 +1,8 @@
-from functools import wraps
+from __future__ import absolute_import, division, print_function
 import types
+
+from ._vendor.six import wraps
+from ._vendor.six.moves import range
 
 # TODO: spend time filling out functionality and make these more robust
 
@@ -12,7 +15,7 @@ def memoize(func):
 
     >>> @memoize
     ... def foo(x):
-    ...     print 'running function with', x
+    ...     print('running function with', x)
     ...     return x+3
     ...
     >>> foo(10)
@@ -25,8 +28,8 @@ def memoize(func):
     14
     >>> @memoize
     ... def range_tuple(limit):
-    ...     print 'running function'
-    ...     return tuple(i for i in xrange(limit))
+    ...     print('running function')
+    ...     return tuple(i for i in range(limit))
     ...
     >>> range_tuple(3)
     running function
@@ -35,8 +38,8 @@ def memoize(func):
     (0, 1, 2)
     >>> @memoize
     ... def range_iter(limit):
-    ...     print 'running function'
-    ...     return (i for i in xrange(limit))
+    ...     print('running function')
+    ...     return (i for i in range(limit))
     ...
     >>> range_iter(3)
     Traceback (most recent call last):
@@ -68,7 +71,7 @@ def memoizemethod(method):
     >>> class Foo (object):
     ...   @memoizemethod
     ...   def foo(self, x, y=0):
-    ...     print 'running method with', x, y
+    ...     print('running method with', x, y)
     ...     return x + y + 3
     ...
     >>> foo1 = Foo()
@@ -91,12 +94,12 @@ def memoizemethod(method):
     ...     self.lower = lower
     ...   @memoizemethod
     ...   def range_tuple(self, upper):
-    ...     print 'running function'
-    ...     return tuple(i for i in xrange(self.lower, upper))
+    ...     print('running function')
+    ...     return tuple(i for i in range(self.lower, upper))
     ...   @memoizemethod
     ...   def range_iter(self, upper):
-    ...     print 'running function'
-    ...     return (i for i in xrange(self.lower, upper))
+    ...     print('running function')
+    ...     return (i for i in range(self.lower, upper))
     ...
     >>> foo = Foo(3)
     >>> foo.range_tuple(6)
@@ -130,12 +133,58 @@ def memoizemethod(method):
         if key in memoized_results:
             return memoized_results[key]
         else:
-            result = method(self, *args, **kwargs)
+            try:
+                result = method(self, *args, **kwargs)
+            except KeyError as e:
+                if '__wrapped__' in str(e):
+                    result = None  # is this the right thing to do?  happened during py3 conversion
+                else:
+                    raise
             if isinstance(result, types.GeneratorType):
                 raise TypeError("Can't memoize a generator!")
             return memoized_results.setdefault(key, result)
 
     return _wrapper
+#
+
+
+
+
+# class memoizemethod(object):
+#     """cache the return value of a method
+#
+#     This class is meant to be used as a decorator of methods. The return value
+#     from a given method invocation will be cached on the instance whose method
+#     was invoked. All arguments passed to a method decorated with memoize must
+#     be hashable.
+#
+#     If a memoized method is invoked directly on its class the result will not
+#     be cached. Instead the method will be invoked like a static method:
+#     class Obj(object):
+#         @memoize
+#         def add_to(self, arg):
+#             return self + arg
+#     Obj.add_to(1) # not enough arguments
+#     Obj.add_to(1, 2) # returns 3, result is not cached
+#     """
+#     def __init__(self, func):
+#         self.func = func
+#     def __get__(self, obj, objtype=None):
+#         if obj is None:
+#             return self.func
+#         return partial(self, obj)
+#     def __call__(self, *args, **kw):
+#         obj = args[0]
+#         try:
+#             cache = obj.__cache
+#         except AttributeError:
+#             cache = obj.__cache = {}
+#         key = (self.func, args[1:], frozenset(kw.items()))
+#         try:
+#             res = cache[key]
+#         except KeyError:
+#             res = cache[key] = self.func(*args, **kw)
+#         return res
 
 
 def clear_memoized_methods(obj, *method_names):
@@ -170,7 +219,7 @@ def clear_memoized_methods(obj, *method_names):
     >>> f.foo()
     2
     """
-    for key in getattr(obj, '_memoized_results', {}).keys():
+    for key in list(getattr(obj, '_memoized_results', {}).keys()):
         # key[0] is the method name
         if key[0] in method_names:
             del obj._memoized_results[key]
@@ -193,7 +242,7 @@ def memoizeproperty(func):
     ...   @memoizeproperty
     ...   def foo(self):
     ...     self._x += 1
-    ...     print 'updating and returning %d'% self._x
+    ...     print('updating and returning %d'% self._x)
     ...     return self._x
     ...
     >>> foo1 = Foo()
@@ -218,3 +267,36 @@ def memoizeproperty(func):
         return self_dict[inner_attname]
 
     return property(new_fget)
+
+
+
+
+
+class class_property(object):
+    # from celery.five
+
+    def __init__(self, getter=None, setter=None):
+        if getter is not None and not isinstance(getter, classmethod):
+            getter = classmethod(getter)
+        if setter is not None and not isinstance(setter, classmethod):
+            setter = classmethod(setter)
+        self.__get = getter
+        self.__set = setter
+
+        info = getter.__get__(object)  # just need the info attrs.
+        self.__doc__ = info.__doc__
+        self.__name__ = info.__name__
+        self.__module__ = info.__module__
+
+    def __get__(self, obj, type=None):
+        if obj and type is None:
+            type = obj.__class__
+        return self.__get.__get__(obj, type)()
+
+    def __set__(self, obj, value):
+        if obj is None:
+            return self
+        return self.__set.__get__(obj)(value)
+
+    def setter(self, setter):
+        return self.__class__(self.__get, setter)

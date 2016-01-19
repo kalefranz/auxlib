@@ -1,7 +1,9 @@
 """A python implementation of the factory design pattern.  It's designed for use as a base class
 for various types of data gateways.
 """
-from auxlib.exceptions import InitializationError
+from __future__ import absolute_import, division, print_function
+from ._vendor.five import with_metaclass
+from .exceptions import InitializationError
 
 __all__ = ['Factory']
 
@@ -74,8 +76,8 @@ class FactoryType(type):
                 return instance
 
 
+@with_metaclass(FactoryType)
 class Factory(object):
-    __metaclass__ = FactoryType
     skip_registration = True
     factory = None
 

@@ -31,7 +31,7 @@ class PathTests(TestCase):
     def test_find_python_file_in_package(self):
         with PackageFile('path.py', 'auxlib') as fh:
             lines = fh.readlines()
-            assert any(line.startswith('class PackageFile(object):') for line in lines)
+            assert any(line.startswith(b'class PackageFile(object):') for line in lines)
 
     # TODO: Write tests for "look for file in site-packages"
     # def test_find_python_file_in_site_packages(self):

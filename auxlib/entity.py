@@ -105,17 +105,21 @@ Examples:
     [('color', 0), ('weight', 44.4)]
 
 """
+from __future__ import absolute_import, division, print_function
 import collections
 import datetime
+from functools import reduce
 import json
 import logging
 
 import dateutil.parser
 from enum import Enum
 
-from auxlib.exceptions import ValidationError, Raise
-from auxlib.collection import AttrDict
-from auxlib.type_coercion import maybecall
+from ._vendor.five import with_metaclass, items, values
+from ._vendor.six import integer_types, string_types
+from .exceptions import ValidationError, Raise
+from .collection import AttrDict
+from .type_coercion import maybecall
 
 log = logging.getLogger(__name__)
 
@@ -242,15 +246,15 @@ class Field(object):
 
 
 class IntField(Field):
-    _type = (int, long)
+    _type = integer_types
 
 
 class StringField(Field):
-    _type = basestring
+    _type = string_types
 
 
 class NumberField(Field):
-    _type = (int, long, float, complex)
+    _type = integer_types + (float, complex)
 
 
 class BooleanField(Field):
@@ -265,9 +269,9 @@ class DateField(Field):
 
     def box(self, val):
         try:
-            return dateutil.parser.parse(val) if isinstance(val, basestring) else val
+            return dateutil.parser.parse(val) if isinstance(val, string_types) else val
         except ValueError as e:
-            raise ValidationError(val, msg=e.message)
+            raise ValidationError(val, msg=e)
 
     def dump(self, val):
         return None if val is None else val.isoformat()
@@ -286,7 +290,7 @@ class EnumField(Field):
         try:
             return val if isinstance(val, self._type) else self._type(val)
         except ValueError as e:
-            raise ValidationError(val, msg=e.message)
+            raise ValidationError(val, msg=e)
 
     def dump(self, val):
         return None if val is None else val.value
@@ -377,7 +381,7 @@ class EntityType(type):
     def __new__(mcs, name, bases, dct):
         # if we're about to mask a field that's already been created with something that's
         #  not a field, then assign it to an alternate variable name
-        non_field_keys = (key for key, value in dct.iteritems()
+        non_field_keys = (key for key, value in items(dct)
                           if not isinstance(value, Field) and not key.startswith('__'))
         entity_subclasses = EntityType.__get_entity_subclasses(bases)
         if entity_subclasses:
@@ -402,13 +406,13 @@ class EntityType(type):
         return cls.__fields__.keys()
 
 
+@with_metaclass(EntityType)
 class Entity(object):
-    __metaclass__ = EntityType
     __fields__ = dict()
     # TODO: add arg order to fields like in enum34
 
     def __init__(self, **kwargs):
-        for key, field in self.__fields__.iteritems():
+        for key, field in items(self.__fields__):
             try:
                 setattr(self, key, kwargs[key])
             except KeyError as e:
@@ -431,7 +435,7 @@ class Entity(object):
     def create_from_objects(cls, *objects, **override_fields):
         init_vars = dict()
         search_maps = (AttrDict(override_fields), ) + objects
-        for key, field in cls.__fields__.iteritems():
+        for key, field in items(cls.__fields__):
             value = find_or_none(key, search_maps)
             if value is not None or field.required:
                 init_vars[key] = field.type(value) if field.is_enum else value
@@ -452,9 +456,9 @@ class Entity(object):
                                     for name, field in self.__fields__.items()
                                     if field.required))
         except AttributeError as e:
-            raise ValidationError(None, msg=e.message)
+            raise ValidationError(None, msg=e)
         except TypeError as e:
-            if "no initial value" in e.message:
+            if "no initial value" in str(e):
                 # TypeError: reduce() of empty sequence with no initial value
                 pass
             else:
@@ -479,7 +483,7 @@ class Entity(object):
     @classmethod
     def __dump_fields(cls):
         if '__dump_fields_cache' not in cls.__dict__:
-            cls.__dump_fields_cache = set([field for field in cls.__fields__.itervalues()
+            cls.__dump_fields_cache = set([field for field in values(cls.__fields__)
                                            if field.in_dump])
         return cls.__dump_fields_cache
 
@@ -507,7 +511,7 @@ def find_or_none(key, search_maps, map_index=0):
         7
         >>> find_or_none('b', (d1, d2))
         2
-        >>> print find_or_none('g', (d1, d2))
+        >>> print(find_or_none('g', (d1, d2)))
         None
         >>> find_or_none('e', (d1, d2))
         6
