@@ -112,7 +112,7 @@ from functools import reduce
 import json
 import logging
 
-import dateutil.parser
+from dateutil.parser import parse as dateparser
 from enum import Enum
 
 from ._vendor.five import with_metaclass, items, values
@@ -269,7 +269,7 @@ class DateField(Field):
 
     def box(self, val):
         try:
-            return dateutil.parser.parse(val) if isinstance(val, string_types) else val
+            return dateparser(val) if isinstance(val, string_types) else val
         except ValueError as e:
             raise ValidationError(val, msg=e)
 
