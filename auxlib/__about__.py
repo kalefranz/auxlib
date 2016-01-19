@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
 """auxiliary library to the python standard library"""
 from __future__ import absolute_import, division, print_function
-import os
-import sys
-import warnings
 
 __all__ = ["__title__", "__author__", "__email__", "__license__", "__copyright__",
            "__homepage__"]
