@@ -1,5 +1,6 @@
 language: python
 python: "3.5"
+sudo: false
 env:
   global:
     - PIP_DOWNLOAD_CACHE=$HOME/.pip-cache
@@ -20,12 +21,12 @@ before_install:
 cache:
   - $HOME/.pip-cache
 
-install:
-  - pip install tox
+install: travis_retry pip install -U tox
 
 script:
   - tox -v
 
 after_success:
-    - pip install codecov
-    - codecov --env TOX_ENV
+  - pip install codecov
+  - codecov --env TOX_ENV
+  
