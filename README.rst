@@ -3,10 +3,7 @@ auxlib
 ======
 
 
-.. image:: https://badge.fury.io/py/auxlib.svg
-    :target: https://badge.fury.io/py/auxlib
-
-.. image:: https://img.shields.io/pypi/v/nine.svg
+.. image:: https://img.shields.io/pypi/v/auxlib.svg
     :target: https://pypi.python.org/pypi/auxlib
 
 .. image:: https://travis-ci.org/kalefranz/auxlib.svg?branch=develop
