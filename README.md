@@ -2,6 +2,8 @@ auxlib
 ======
 
 
+[![PyPI](https://img.shields.io/pypi/v/auxlib.svg)](https://pypi.python.org/pypi/auxlib)
+
 [![Build Status](https://travis-ci.org/kalefranz/auxlib.svg?branch=develop)](https://travis-ci.org/kalefranz/auxlib)
 
 [![Build status](https://ci.appveyor.com/api/projects/status/epk1egfkid8wyd6r?svg=true)](https://ci.appveyor.com/project/kalefranz/auxlib)
