@@ -3,12 +3,29 @@ auxlib
 ======
 
 
-[![PyPI](https://img.shields.io/pypi/v/auxlib.svg)](https://pypi.python.org/pypi/auxlib)
+.. image:: https://badge.fury.io/py/auxlib.svg
+    :target: https://badge.fury.io/py/auxlib
 
-[![Build Status](https://travis-ci.org/kalefranz/auxlib.svg?branch=develop)](https://travis-ci.org/kalefranz/auxlib)
+.. image:: https://img.shields.io/pypi/v/nine.svg
+    :target: https://pypi.python.org/pypi/auxlib
 
-[![Build status](https://ci.appveyor.com/api/projects/status/epk1egfkid8wyd6r?svg=true)](https://ci.appveyor.com/project/kalefranz/auxlib)
+.. image:: https://travis-ci.org/kalefranz/auxlib.svg?branch=develop
+    :target: https://travis-ci.org/kalefranz/auxlib
 
-[![codecov.io](https://codecov.io/github/kalefranz/auxlib/coverage.svg?branch=develop)](https://codecov.io/github/kalefranz/auxlib?branch=develop)
+.. image:: https://ci.appveyor.com/api/projects/status/epk1egfkid8wyd6r/branch/develop?svg=true
+    :target: https://ci.appveyor.com/project/kalefranz/auxlib
 
-[![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/kalefranz/auxlib/badges/quality-score.png?b=develop)](https://scrutinizer-ci.com/g/kalefranz/auxlib/?branch=develop)
+.. image:: https://codecov.io/github/kalefranz/auxlib/coverage.svg?branch=develop
+    :target: https://codecov.io/github/kalefranz/auxlib?branch=develop
+
+.. image:: https://scrutinizer-ci.com/g/kalefranz/auxlib/badges/quality-score.png?b=develop
+   :target: https://scrutinizer-ci.com/g/kalefranz/auxlib/?branch=develop
+   :alt: Scrutinizer Code Quality
+
+.. image:: https://codeclimate.com/github/kalefranz/auxlib/badges/gpa.svg
+   :target: https://codeclimate.com/github/kalefranz/auxlib
+   :alt: Code Climate
+
+.. image:: https://codeclimate.com/github/kalefranz/auxlib/badges/issue_count.svg
+  :target: https://codeclimate.com/github/kalefranz/auxlib
+  :alt: Issue Count
