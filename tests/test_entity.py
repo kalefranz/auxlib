@@ -2,6 +2,7 @@
 import datetime
 import dateutil.parser
 from enum import Enum
+import time
 import unittest
 
 from testtools import TestCase, ExpectedException
@@ -549,13 +550,16 @@ class DateFieldTests(TestCase):
         with ExpectedException(ValidationError):
             DateEntity(field=15)
 
-    def test_callable_values(self):
+    def test_callable_defaults(self):
         de = DateEntity(field=NOW)
         assert isinstance(de.field, datetime.datetime)
         assert de.field == NOW
         assert isinstance(de.field_w_default_callable, datetime.datetime)
-        assert (dateutil.parser.parse(de.field_w_default_callable.isoformat())
-                < dateutil.parser.parse(de.field_w_default_callable.isoformat()))
+
+        de1 = de.field_w_default_callable.isoformat()
+        time.sleep(1)
+        de2 = de.field_w_default_callable.isoformat()
+        assert (dateutil.parser.parse(de1) < dateutil.parser.parse(de2))
 
     def test_nullable_field(self):
         de = DateEntity(field=NOW)
