@@ -240,14 +240,16 @@ class Configuration(object):
         self.__dict__.pop('_memoized_results', None)
 
     def __set_up_sighup_handler(self):
-        def sighup_handler(signum, frame):
-            if signum != signal.SIGHUP:
-                return
-            self._reload(True)
-            if callable(self.__previous_sighup_handler):
-                self.__previous_sighup_handler(signum, frame)
-        self.__previous_sighup_handler = signal.getsignal(signal.SIGHUP)
-        signal.signal(signal.SIGHUP, sighup_handler)
+        # Reload config on SIGHUP (UNIX only)
+        if hasattr(signal, 'SIGHUP'):
+            def sighup_handler(signum, frame):
+                if signum != signal.SIGHUP:
+                    return
+                self._reload(True)
+                if callable(self.__previous_sighup_handler):
+                    self.__previous_sighup_handler(signum, frame)
+            self.__previous_sighup_handler = signal.getsignal(signal.SIGHUP)
+            signal.signal(signal.SIGHUP, sighup_handler)
 
 
 
