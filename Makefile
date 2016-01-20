@@ -4,8 +4,8 @@ VERSION = $(shell cat auxlib/.version)
 clean:
 	find . -name \*.py[co] -delete
 	find . -type d -name "__pycache__" -delete
-	rm -rf *.egg* .eggs .tox dist
-
+	rm -rf .cache .eggs .tox dist *.egg*
+	rm -rf .coverage coverage.xml junit.xml
 
 release: clean
 	@echo "version=$(VERSION)"
