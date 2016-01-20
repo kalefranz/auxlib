@@ -24,7 +24,8 @@ install:
   - pip install tox
 
 script:
-  - tox
+  - tox -v
 
 after_success:
-  - .tox/$TOXENV/bin/coveralls
+    - pip install codecov
+    - codecov
