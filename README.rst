@@ -4,16 +4,16 @@ auxlib
 
 
 .. image:: https://img.shields.io/pypi/v/auxlib.svg
-    :target: https://pypi.python.org/pypi/auxlib
+   :target: https://pypi.python.org/pypi/auxlib
 
 .. image:: https://travis-ci.org/kalefranz/auxlib.svg?branch=develop
-    :target: https://travis-ci.org/kalefranz/auxlib
+   :target: https://travis-ci.org/kalefranz/auxlib
 
 .. image:: https://ci.appveyor.com/api/projects/status/epk1egfkid8wyd6r/branch/develop?svg=true
-    :target: https://ci.appveyor.com/project/kalefranz/auxlib
+   :target: https://ci.appveyor.com/project/kalefranz/auxlib
 
 .. image:: https://codecov.io/github/kalefranz/auxlib/coverage.svg?branch=develop
-    :target: https://codecov.io/github/kalefranz/auxlib?branch=develop
+   :target: https://codecov.io/github/kalefranz/auxlib?branch=develop
 
 .. image:: https://scrutinizer-ci.com/g/kalefranz/auxlib/badges/quality-score.png?b=develop
    :target: https://scrutinizer-ci.com/g/kalefranz/auxlib/?branch=develop
@@ -24,5 +24,5 @@ auxlib
    :alt: Code Climate
 
 .. image:: https://codeclimate.com/github/kalefranz/auxlib/badges/issue_count.svg
-  :target: https://codeclimate.com/github/kalefranz/auxlib
-  :alt: Issue Count
+   :target: https://codeclimate.com/github/kalefranz/auxlib
+   :alt: Issue Count

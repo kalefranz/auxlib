@@ -5,7 +5,7 @@ clean:
 	find . -name \*.py[co] -delete
 	find . -type d -name "__pycache__" -delete
 	rm -rf .cache .eggs .tox dist *.egg*
-	rm -rf .coverage coverage.xml junit.xml
+	rm -rf .coverage coverage.xml junit.xml MANIFEST
 
 release: clean
 	@echo "version=$(VERSION)"
