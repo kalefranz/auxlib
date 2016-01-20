@@ -16,7 +16,7 @@ auxlib
     :target: https://ci.appveyor.com/project/kalefranz/auxlib
 
 .. image:: https://codecov.io/github/kalefranz/auxlib/coverage.svg?branch=develop
-    :target: https://codecov.io/github/kalefranz/auxlib?branch=develop
+    :target: https://codecov.io/github/kalefranz/auxlib?branch=develop
 
 .. image:: https://scrutinizer-ci.com/g/kalefranz/auxlib/badges/quality-score.png?b=develop
    :target: https://scrutinizer-ci.com/g/kalefranz/auxlib/?branch=develop
