@@ -389,6 +389,8 @@ class EntityType(type):
                                 if any(isinstance(base.__dict__.get(key, None), Field)
                                        for base in entity_subclasses)]
             dct[KEY_OVERRIDES_MAP] = {key: dct.pop(key) for key in keys_to_override}
+        else:
+            dct[KEY_OVERRIDES_MAP] = dict()
 
         return super(EntityType, mcs).__new__(mcs, name, bases, dct)
 
@@ -417,17 +419,13 @@ class Entity(object):
                 setattr(self, key, kwargs[key])
             except KeyError:
                 # handle the case of fields inherited from subclass but overrode on class object
-                if key in getattr(self, KEY_OVERRIDES_MAP, []):
+                if key in getattr(self, KEY_OVERRIDES_MAP):
                     setattr(self, key, getattr(self, KEY_OVERRIDES_MAP)[key])
-                elif not field.required or field.default is not None:
-                    pass
-                else:
+                elif field.required and field.default is None:
                     raise ValidationError(key, msg="{} requires a {} field. Instantiated with {}"
                                                    "".format(self.__class__.__name__, key, kwargs))
             except ValidationError:
-                if kwargs[key] is None and not field.required:
-                    pass
-                else:
+                if kwargs[key] is not None or field.required:
                     raise
         self.validate()
 
