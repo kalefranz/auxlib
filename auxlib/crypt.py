@@ -11,6 +11,7 @@ import hashlib
 import hmac
 import logging
 import os
+from six import text_type
 
 try:
     from Crypto.Cipher import AES
@@ -44,13 +45,13 @@ def decrypt(secret_key, encryption_key_encrypted, encrypted_data):
 
 
 def as_base64(content):
-    if isinstance(content, unicode):
+    if isinstance(content, text_type):
         content = content.encode("UTF-8")
     return base64.urlsafe_b64encode(content)
 
 
 def from_base64(content):
-    if isinstance(content, unicode):
+    if isinstance(content, text_type):
         content = content.encode('UTF-8')
     return base64.urlsafe_b64decode(content)
 
@@ -68,7 +69,7 @@ def generate_encryption_key():
 
 
 def generate_hash_from_secret(secret):
-    return as_base64(hashlib.sha512(secret).digest())
+    return as_base64(hashlib.sha512(text_type(secret).encode('UTF-8')).digest())
 
 
 def aes_encrypt(base64_encryption_key, data):
@@ -83,7 +84,7 @@ def aes_encrypt(base64_encryption_key, data):
         str: the encrypted data as a byte string with the HMAC signature appended to the end
 
     """
-    if isinstance(data, unicode):
+    if isinstance(data, text_type):
         data = data.encode("UTF-8")
     aes_key_bytes, hmac_key_bytes = _extract_keys(base64_encryption_key)
     data = _pad(data)

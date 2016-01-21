@@ -2,6 +2,7 @@
 import os
 
 import pytest
+from six import PY2
 from testtools import TestCase
 
 from auxlib import crypt
@@ -15,7 +16,7 @@ def can_import():
         return False
 
 pycrypto = pytest.mark.skipif(
-    not can_import(),
+    not (can_import() and PY2),
     reason="PyCrypto must be installed to run this test"
 )
 
