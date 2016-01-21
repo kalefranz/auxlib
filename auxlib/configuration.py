@@ -97,8 +97,7 @@ class Configuration(object):
         self.appname = appname
         self.package = inspect.getmodule(self).__package__
 
-        # A private flag used to indicate if sources are being loaded for the first time or are
-        # being reloaded.
+        # Indicates if sources are being loaded for the first time or are being reloaded.
         self.__initial_load = True
 
         # The ordered list of sources from which to load key, value pairs.
@@ -108,13 +107,10 @@ class Configuration(object):
         # Keys are stored as all lower-case. Access by key is provided in a case-insensitive way.
         self._config_map = dict()
 
-        #
-        self._registered_env_keys = set()
-
+        self._registered_env_keys = set()  # TODO: add explanation comments
         self._required_keys = set(listify(required_parameters))
 
-        # Reload config on SIGHUP (UNIX only)
-        if hasattr(signal, 'SIGHUP'):
+        if hasattr(signal, 'SIGHUP'):  # Reload config on SIGHUP (UNIX only)
             self.__set_up_sighup_handler()
 
         self.__load_environment_keys()
