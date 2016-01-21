@@ -23,10 +23,9 @@ class PathTests(TestCase):
         assert not logz.detach_stderr()
 
     def test_find_real_file(self):
-        fh = open_package_file('requirements/test.txt', None)
-        lines = fh.readlines()
-        fh.close()
-        assert any(line.startswith('testtools') for line in lines)
+        with open_package_file('auxlib/.version', None) as fh:
+            stuff = fh.read()
+        assert '.' in stuff.strip()
 
     def test_find_python_file_in_package(self):
         with PackageFile('path.py', 'auxlib') as fh:

@@ -1,11 +1,13 @@
 VERSION = $(shell cat auxlib/.version)
 
 
+test:
+	python setup.py test
+
+
 clean:
-	find . -name \*.py[co] -delete
-	find . -type d -name "__pycache__" -delete
-	rm -rf .cache .eggs .tox dist *.egg*
-	rm -rf .coverage coverage.xml junit.xml MANIFEST
+	@./scripts/clean
+
 
 release: clean
 	@echo "version=$(VERSION)"
@@ -16,4 +18,13 @@ release: clean
 	python setup.py release
 
 
-.PHONY: clean release version
+ve:
+	@tox -e devenv
+	@echo "\n\nnow run  $ source ve/bin/activate\n"
+
+
+version:
+	@echo $(VERSION)
+
+
+.PHONY: clean release test ve version

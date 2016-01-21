@@ -252,7 +252,6 @@ class Configuration(object):
             signal.signal(signal.SIGHUP, sighup_handler)
 
 
-
 class Source(object):
     _items = None
     _provides = None
