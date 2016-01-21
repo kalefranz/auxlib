@@ -415,7 +415,7 @@ class Entity(object):
         for key, field in items(self.__fields__):
             try:
                 setattr(self, key, kwargs[key])
-            except KeyError as e:
+            except KeyError:
                 # handle the case of fields inherited from subclass but overrode on class object
                 if key in getattr(self, KEY_OVERRIDES_MAP, []):
                     setattr(self, key, getattr(self, KEY_OVERRIDES_MAP)[key])
@@ -465,7 +465,8 @@ class Entity(object):
                 raise  # pragma: no cover
 
     def __repr__(self):
-        _repr = lambda val: repr(val.value) if isinstance(val, Enum) else repr(val)
+        def _repr(val):
+            return repr(val.value) if isinstance(val, Enum) else repr(val)
         return "{}({})".format(
             self.__class__.__name__,
             ", ".join("{}={}".format(key, _repr(value)) for key, value in self.__dict__.items()))

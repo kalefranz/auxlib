@@ -2,7 +2,6 @@ from __future__ import absolute_import, division, print_function
 import types
 
 from ._vendor.six import wraps
-from ._vendor.six.moves import range
 
 # TODO: spend time filling out functionality and make these more robust
 
@@ -145,9 +144,6 @@ def memoizemethod(method):
             return memoized_results.setdefault(key, result)
 
     return _wrapper
-#
-
-
 
 
 # class memoizemethod(object):
@@ -267,9 +263,6 @@ def memoizeproperty(func):
         return self_dict[inner_attname]
 
     return property(new_fget)
-
-
-
 
 
 class class_property(object):

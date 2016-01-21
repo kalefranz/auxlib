@@ -23,8 +23,7 @@ class FactoryBase(object):
     def get_instance(cls, provider=None):
         if not hasattr(cls, 'context'):
             raise InitializationError("RecordRepoFactory has not been initialized.")
-        provider = (provider.__name__ if isinstance(provider, type) else provider
-                    or cls._default_provider)
+        provider = provider.__name__ if isinstance(provider, type) else provider or cls._default_provider  # noqa
         return cls.providers[provider](cls.context)
 
     @classmethod
@@ -82,7 +81,7 @@ class Factory(object):
     factory = None
 
 
-## Document these ##
+# ## Document these ##
 # __metaclass__
 # factory
 # skip_registration

@@ -95,5 +95,3 @@ def stringify(object):
             builder.append(object.body)
             builder.append('')
         return "\n".join(builder)
-
-
