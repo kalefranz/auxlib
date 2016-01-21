@@ -113,7 +113,10 @@ class Configuration(object):
 
         self._required_keys = set(listify(required_parameters))
 
-        self.__set_up_sighup_handler()
+        # Reload config on SIGHUP (UNIX only)
+        if hasattr(signal, 'SIGHUP'):
+            self.__set_up_sighup_handler()
+
         self.__load_environment_keys()
         self.append_sources(config_sources)
 
@@ -240,16 +243,14 @@ class Configuration(object):
         self.__dict__.pop('_memoized_results', None)
 
     def __set_up_sighup_handler(self):
-        # Reload config on SIGHUP (UNIX only)
-        if hasattr(signal, 'SIGHUP'):
-            def sighup_handler(signum, frame):
-                if signum != signal.SIGHUP:
-                    return
-                self._reload(True)
-                if callable(self.__previous_sighup_handler):
-                    self.__previous_sighup_handler(signum, frame)
-            self.__previous_sighup_handler = signal.getsignal(signal.SIGHUP)
-            signal.signal(signal.SIGHUP, sighup_handler)
+        def sighup_handler(signum, frame):
+            if signum != signal.SIGHUP:
+                return
+            self._reload(True)
+            if callable(self.__previous_sighup_handler):
+                self.__previous_sighup_handler(signum, frame)
+        self.__previous_sighup_handler = signal.getsignal(signal.SIGHUP)
+        signal.signal(signal.SIGHUP, sighup_handler)
 
 
 class Source(object):
