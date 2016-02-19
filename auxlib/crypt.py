@@ -21,7 +21,7 @@ except ImportError:
                                       'which is not installed in the current '
                                       'environment.')
 
-from auxlib.exceptions import AuthenticationError
+from .exceptions import AuthenticationError
 
 log = logging.getLogger(__name__)
 
