@@ -33,7 +33,3 @@ auxlib
 
 .. image:: https://api.codacy.com/project/badge/grade/5195a5ac49fe49c59a4067b420fa76ad
    :target: https://www.codacy.com/app/kalefranz/auxlib
-
-.. image:: https://requires.io/github/kalefranz/auxlib/requirements.svg?branch=feature%2Fquantifiedcode
-     :target: https://requires.io/github/kalefranz/auxlib/requirements/?branch=feature%2Fquantifiedcode
-     :alt: Requirements Status
