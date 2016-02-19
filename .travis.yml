@@ -4,6 +4,7 @@ sudo: false
 env:
   global:
     - PIP_DOWNLOAD_CACHE=$HOME/.pip-cache
+    - secure: "vbmp+Jid6vuRUQsTMKiJprbW4T0N4WmAPfkEEmc1PsriH+99fXV8PEwaitEdhBNgrmAf1bFV7mtpuVfUEVeGgND3RVND9LUj/ep/+MFc5gFY6OmqcPngn7vcST5RTpoDqGX7hBrjpP55szwCwB8Vklo5IXZUxHL7hOT+blbkWvc="
   matrix:
     - TOXENV=py27
     - TOXENV=py34
@@ -23,5 +24,6 @@ script:
   - tox -v
 
 after_success:
-  - pip install codecov
+  - travis_retry pip install codecov codacy-coverage
   - codecov --env TOX_ENV
+  - python-codacy-coverage -r coverage.xml
