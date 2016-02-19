@@ -105,7 +105,7 @@ class TestAESEncryption(TestCase):
 
     def test_encrypt_decrypt(self):
         data = 'abcdefg\n' * 5000
-        secret_key = "scoobydoobydoo"
+        secret_key = "test_scoobydoobydoo"
         encryption_key_encrypted, encrypted_data = encrypt(secret_key, data)
         round_trip = decrypt(secret_key, encryption_key_encrypted, encrypted_data)
         self.assertEqual(data, round_trip)

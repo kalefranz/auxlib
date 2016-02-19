@@ -16,10 +16,6 @@ before_install:
   - python --version
   - printenv
   - uname -a
-  - lsb_release -a
-
-cache:
-  - $HOME/.pip-cache
 
 install: travis_retry pip install -U tox
 
