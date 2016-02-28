@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 import datetime
+import json
+
 import dateutil.parser
 from enum import Enum
 import time
@@ -8,7 +10,8 @@ import unittest
 from testtools import TestCase, ExpectedException
 
 from auxlib._vendor.six import string_types, integer_types
-from auxlib.entity import Entity, StringField, IntField, EnumField, ListField, DateField
+from auxlib.entity import (Entity, StringField, IntField, EnumField, ListField,
+                           DateField, BooleanField)
 from auxlib.exceptions import ValidationError
 
 
@@ -40,6 +43,7 @@ class SampleEntity(Entity):
     integer_field_w_default = IntField(42)
     enum_field = EnumField(ChooseOne)
     enum_field_w_default = EnumField(ChooseOne, ChooseOne.B)
+    list_field = ListField(string_types, ['alpha', 'beta', 'gamma'])
 
 
 class DerivedSampleEntity(SampleEntity):
@@ -92,6 +96,7 @@ class EntityTests(unittest.TestCase):
         assert d.pop('string_field_w_default') == 'default'
         assert d.pop('integer_field_w_default') == 42
         assert d.pop('enum_field_w_default') == 'b'
+        assert d.pop('list_field') == ('alpha', 'beta', 'gamma')
 
         assert len(d) == 0
 
@@ -167,6 +172,20 @@ class EntityTests(unittest.TestCase):
 
         with ExpectedException(ValidationError):
             dse.integer_field = None
+
+    def test_entity_fields_list(self):
+        fields = DerivedSampleEntity.fields
+        assert 'string_field_w_default' in fields
+        assert 'new_field' in fields
+
+    def test_from_json(self):
+        se = SampleEntity(string_field='bazaar', integer_field=28, enum_field=ChooseOne.B)
+        se_dumped = se.dump()
+
+        se_reloaded = SampleEntity.from_json(json.dumps(se_dumped))
+        assert se == se_reloaded
+
+        json_str = json.dumps(se.dump())
 
 
 class MiscFieldTests(TestCase):
@@ -575,11 +594,17 @@ class DateFieldTests(TestCase):
         de.field_wo_required_w_nullable = None
         assert de.field_wo_required_w_nullable == None
 
+    def test_datefield_dump(self):
+        de = DateEntity(field=NOW)
+        dumped = de.dump()
+        assert dumped['field'] == NOW.isoformat()
+
 
 class ListEntity(Entity):
     field = ListField(string_types)
     field_w_default = ListField(integer_types, default=[42, 43])
     field_wo_required = ListField(float, required=False)
+    field_nullable = ListField(integer_types, default=[1], nullable=True)
 
 
 class ListFieldTests(TestCase):
@@ -617,3 +642,58 @@ class ListFieldTests(TestCase):
         assert not hasattr(le, 'field_wo_required')
         with ExpectedException(AttributeError):
             le.field_wo_required
+
+    def test_non_iterable_assignment(self):
+        le = ListEntity(field=['abc', 'def'])
+
+        with ExpectedException(ValidationError):
+            le.field = "just a string"
+
+        with ExpectedException(ValidationError):
+            le.field = 123456
+
+    def test_dump_simple_list(self):
+        le = ListEntity(field=['abc', 'def'])
+        dumped = le.dump()
+        assert dumped['field'] == ('abc', 'def')
+        assert dumped['field_w_default'] == (42, 43)
+
+    def test_nullable_list_field(self):
+        le = ListEntity(field=['abc', 'def'])
+        with ExpectedException(ValidationError):
+            le.field = None
+        le.field_nullable = None
+        assert le.field_nullable == None
+
+
+class BooleanFieldTests(TestCase):
+
+    def test_assignment(self):
+        class BooleanEntity(Entity):
+            field1 = BooleanField()
+            field2 = BooleanField(False, nullable=True)
+
+        be = BooleanEntity(field1=True)
+        assert be.field1 == True
+        assert be.field2 == False
+
+        be.field1 = False
+        be.field2 = None
+        assert be.field1 == False
+        assert be.field2 is None
+
+        with ExpectedException(ValidationError):
+            be.field1 = None
+
+    def test_boolean_nullable_no_default(self):
+        class BooleanEntity2(Entity):
+            field = BooleanField(nullable=True)
+
+        with ExpectedException(ValidationError):
+            BooleanEntity2()
+
+
+
+# TODO:
+#  - test MapField eq/hash
+#  - test ComposableField eq/hash

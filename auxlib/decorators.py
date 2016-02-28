@@ -265,7 +265,7 @@ def memoizeproperty(func):
     return property(new_fget)
 
 
-class class_property(object):
+class classproperty(object):
     # from celery.five
 
     def __init__(self, getter=None, setter=None):
@@ -281,10 +281,10 @@ class class_property(object):
         self.__name__ = info.__name__
         self.__module__ = info.__module__
 
-    def __get__(self, obj, type=None):
-        if obj and type is None:
-            type = obj.__class__
-        return self.__get.__get__(obj, type)()
+    def __get__(self, obj, type_=None):
+        if obj and type_ is None:
+            type_ = obj.__class__
+        return self.__get.__get__(obj, type_)()
 
     def __set__(self, obj, value):
         if obj is None:

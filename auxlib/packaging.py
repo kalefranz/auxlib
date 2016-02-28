@@ -2,7 +2,6 @@
 from __future__ import print_function, division, absolute_import
 from logging import getLogger
 from os.path import basename, dirname, join, isdir
-from pkg_resources import resource_string
 from re import match
 from setuptools.command.build_py import build_py
 from setuptools.command.sdist import sdist
@@ -10,50 +9,53 @@ from setuptools.command.test import test as TestCommand
 from subprocess import CalledProcessError, check_call, check_output
 from sys import exit
 
-from .path import absdirname
+from .path import absdirname, PackageFile
 
 log = getLogger(__name__)
 
 
 def _get_version_from_pkg_info(package_name):
-    return resource_string(package_name, '.version')
+    with PackageFile('.version', package_name) as fh:
+        return fh.read()
+
+
+def _is_git_dirty():
+    try:
+        check_call(('git', 'diff', '--quiet'))
+        check_call(('git', 'diff', '--cached', '--quiet'))
+        return False
+    except CalledProcessError:
+        return True
+
+
+def _get_most_recent_git_tag():
+    try:
+        return check_output(["git", "describe", "--tags"]).strip()
+    except CalledProcessError as e:
+        if e.returncode == 128:
+            return "0.0.0.0"
+        else:
+            raise  # pragma: no cover
+
+
+def _get_git_hash():
+    try:
+        return check_output(["git", "rev-parse", "HEAD"]).strip()[:7]
+    except CalledProcessError:
+        return 0
 
 
 def _get_version_from_git_tag():
     """Return a PEP440-compliant version derived from the git status.
     If that fails for any reason, return the first 7 chars of the changeset hash.
     """
-
-    def _is_dirty():
-        try:
-            check_call(['git', 'diff', '--quiet'])
-            check_call(['git', 'diff', '--cached', '--quiet'])
-            return False
-        except CalledProcessError:
-            return True
-
-    def _get_most_recent_tag():
-        try:
-            return check_output(["git", "describe", "--tags"]).strip()
-        except CalledProcessError as e:
-            if e.returncode == 128:
-                return "0.0.0.0"
-            else:
-                raise
-
-    def _get_hash():
-        try:
-            return check_output(["git", "rev-parse", "HEAD"]).strip()[:7]
-        except CalledProcessError:
-            return
-
-    tag = _get_most_recent_tag()
+    tag = _get_most_recent_git_tag()
     m = match("(?P<xyz>\d+\.\d+\.\d+)(?:-(?P<dev>\d+)-(?P<hash>.+))?", tag)
 
     version = m.group('xyz')
-    if m.group('dev') or _is_dirty():
+    if m.group('dev') or _is_git_dirty():
         version += ".dev{dev}+{hash}".format(dev=m.group('dev') or 0,
-                                             hash=m.group('hash') or _get_hash())
+                                             hash=m.group('hash') or _get_git_hash())
     return version
 
 
@@ -90,9 +92,6 @@ def get_version(file, package):
 
 class BuildPyCommand(build_py):
     def run(self):
-        # root = get_root()
-        # cfg = get_config_from_root(root)
-        # versions = get_versions()
         build_py.run(self)
         # locate .version in the new build/ directory and replace it with an updated value
         target_version_file = join(self.build_lib, self.distribution.metadata.name, ".version")
