@@ -31,7 +31,7 @@ class PackageFile(object):
         self.file_handle = open_package_file(self.file_path, self.package_name)
         return self.file_handle
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, *args):
         self.file_handle.close()
 
 

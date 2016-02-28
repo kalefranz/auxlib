@@ -201,8 +201,7 @@ class Field(object):
             ValidationError
         """
         # note here calling, but not assigning; could lead to unexpected behavior
-        if isinstance(val, self._type):
-            if self._validation is None or self._validation(val):
+        if isinstance(val, self._type) and (self._validation is None or self._validation(val)):
                 return val
         elif val is None and self.nullable:
             return val
@@ -389,7 +388,7 @@ class EntityType(type):
         entity_subclasses = EntityType.__get_entity_subclasses(bases)
         if entity_subclasses:
             keys_to_override = [key for key in non_field_keys
-                                if any(isinstance(base.__dict__.get(key, None), Field)
+                                if any(isinstance(base.__dict__.get(key), Field)
                                        for base in entity_subclasses)]
             dct[KEY_OVERRIDES_MAP] = {key: dct.pop(key) for key in keys_to_override}
         else:
@@ -486,8 +485,7 @@ class Entity(object):
     @classmethod
     def __dump_fields(cls):
         if '__dump_fields_cache' not in cls.__dict__:
-            cls.__dump_fields_cache = set([field for field in values(cls.__fields__)
-                                           if field.in_dump])
+            cls.__dump_fields_cache = {field for field in values(cls.__fields__) if field.in_dump}
         return cls.__dump_fields_cache
 
     def __eq__(self, other):

@@ -222,7 +222,7 @@ def clear_memoized_methods(obj, *method_names):
 
     property_dict = obj.__dict__
     for prop in method_names:
-        inner_attname = '_%s' % prop
+        inner_attname = '_{0}'.format(prop)
         if inner_attname in property_dict:
             del property_dict[inner_attname]
 
@@ -238,7 +238,7 @@ def memoizeproperty(func):
     ...   @memoizeproperty
     ...   def foo(self):
     ...     self._x += 1
-    ...     print('updating and returning %d'% self._x)
+    ...     print('updating and returning {0}'.format(self._x))
     ...     return self._x
     ...
     >>> foo1 = Foo()
@@ -254,7 +254,7 @@ def memoizeproperty(func):
     >>> foo1.foo
     2
     """
-    inner_attname = '_%s' % func.__name__
+    inner_attname = '_{0}'.format(func.__name__)
 
     def new_fget(self):
         self_dict = self.__dict__

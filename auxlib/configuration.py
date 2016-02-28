@@ -166,7 +166,7 @@ class Configuration(object):
         key = key.lower()
         if key in self._registered_env_keys:
             from_env = os.getenv(make_env_key(self.appname, key))
-            from_sources = self._config_map.get(key, None)
+            from_sources = self._config_map.get(key)
             return typify(from_env, type(from_sources) if from_sources is not None else None)
         else:
             try:
@@ -183,7 +183,7 @@ class Configuration(object):
         except KeyError:
             return default
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, *args):
         raise AssignmentError()
 
     def __iter__(self):
