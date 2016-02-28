@@ -50,6 +50,5 @@ class TestPackagingNotGitRepo(TestCase):
         assert tag == "0.0.0.0"
 
     def test_get_git_hash_no_repo(self):
-        hash = _get_git_hash()
-        assert hash == 0
+        assert _get_git_hash() == 0
 

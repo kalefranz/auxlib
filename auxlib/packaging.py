@@ -51,8 +51,7 @@ def _get_version_from_git_tag():
     """
     tag = _get_most_recent_git_tag()
     m = match(b"(?P<xyz>\d+\.\d+\.\d+)(?:-(?P<dev>\d+)-(?P<hash>.+))?", tag)
-
-    version = m.group('xyz')
+    version = m.group('xyz').decode('utf-8')
     if m.group('dev') or _is_git_dirty():
         version += ".dev{dev}+{hash}".format(dev=m.group('dev') or 0,
                                              hash=m.group('hash') or _get_git_hash())
