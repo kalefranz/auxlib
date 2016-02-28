@@ -169,7 +169,7 @@ class Field(object):
             elif self._nullable:
                 return None
             else:
-                raise AttributeError("A value for {} has not been set".format(self.name))
+                raise AttributeError("A value for {0} has not been set".format(self.name))
         return self.unbox(val)
 
     def __set__(self, instance, val):
@@ -311,7 +311,7 @@ class ListField(Field):
                 return tuple(val)
         else:
             raise ValidationError(val, msg="Cannot assign a non-iterable value to "
-                                           "{}".format(self.name))
+                                           "{0}".format(self.name))
 
     def unbox(self, val):
         return tuple() if val is None and not self.nullable else val
@@ -420,8 +420,9 @@ class Entity(object):
                 if key in getattr(self, KEY_OVERRIDES_MAP):
                     setattr(self, key, getattr(self, KEY_OVERRIDES_MAP)[key])
                 elif field.required and field.default is None:
-                    raise ValidationError(key, msg="{} requires a {} field. Instantiated with {}"
-                                                   "".format(self.__class__.__name__, key, kwargs))
+                    raise ValidationError(key, msg="{0} requires a {1} field. Instantiated with "
+                                                   "{2}".format(self.__class__.__name__,
+                                                                key, kwargs))
             except ValidationError:
                 if kwargs[key] is not None or field.required:
                     raise
@@ -463,9 +464,9 @@ class Entity(object):
     def __repr__(self):
         def _repr(val):
             return repr(val.value) if isinstance(val, Enum) else repr(val)
-        return "{}({})".format(
+        return "{0}({1})".format(
             self.__class__.__name__,
-            ", ".join("{}={}".format(key, _repr(value)) for key, value in self.__dict__.items()))
+            ", ".join("{0}={1}".format(key, _repr(value)) for key, value in self.__dict__.items()))
 
     @classmethod
     def __register__(cls):

@@ -40,12 +40,12 @@ def open_package_file(file_path, package_name):
 
     # look for file at relative path
     if exists(file_path):
-        log.info("found real file {}".format(file_path))
+        log.info("found real file {0}".format(file_path))
         return open(file_path)
 
     # look for file in package resources
     if package_name and pkg_resources.resource_exists(package_name, file_path):
-        log.info("found package resource file {} for package {}".format(file_path, package_name))
+        log.info("found package resource file {0} for package {1}".format(file_path, package_name))
         return pkg_resources.resource_stream(package_name, file_path)
 
     # look for file in site-packages
@@ -53,7 +53,7 @@ def open_package_file(file_path, package_name):
     if package_path:
         return open(package_path)  # pragma: no cover
 
-    msg = "file for module [{}] cannot be found at path {}".format(package_name, file_path)
+    msg = "file for module [{0}] cannot be found at path {1}".format(package_name, file_path)
     log.error(msg)
     raise IOError(msg)
 
@@ -63,7 +63,7 @@ def find_file_in_site_packages(file_path, package_name):
     for site_packages_path in site_packages_paths():
         test_path = join(site_packages_path, package_path, file_path)
         if exists(test_path):
-            log.info("found site-package file {} for package {}".format(file_path, package_name))
+            log.info("found site-package file {0} for package {1}".format(file_path, package_name))
             return test_path
     return None
 

@@ -23,7 +23,6 @@ class NonStringIterable(object):
 
     @classmethod
     def __subclasshook__(cls, C):
-        if cls is NonStringIterable:
-            if any("__iter__" in B.__dict__ for B in C.__mro__):
-                return True
+        if cls is NonStringIterable and any("__iter__" in B.__dict__ for B in C.__mro__):
+            return True
         return NotImplemented

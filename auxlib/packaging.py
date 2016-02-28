@@ -7,7 +7,7 @@ from setuptools.command.build_py import build_py
 from setuptools.command.sdist import sdist
 from setuptools.command.test import test as TestCommand
 from subprocess import CalledProcessError, check_call, check_output
-from sys import exit
+import sys
 
 from .path import absdirname, PackageFile
 
@@ -107,7 +107,7 @@ class SdistCommand(sdist):
     def make_release_tree(self, base_dir, files):
         sdist.make_release_tree(self, base_dir, files)
         target_version_file = join(base_dir, self.distribution.metadata.name, ".version")
-        print("UPDATING %s" % target_version_file)
+        print("UPDATING {0}".format(target_version_file))
         with open(target_version_file, 'w') as f:
             f.write(self.distribution.metadata.version)
 
@@ -134,7 +134,7 @@ class Tox(TestCommand):
         else:
             args = ''
         errno = tox.cmdline(args=args)
-        exit(errno)
+        sys.exit(errno)
 
 
 if __name__ == "__main__":

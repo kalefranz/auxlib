@@ -38,10 +38,10 @@ class ValidationError(AuxlibError, TypeError):
         if msg is not None:
             super(ValidationError, self).__init__(msg)
         elif value is None:
-            super(ValidationError, self).__init__("Value for {} not given or invalid."
+            super(ValidationError, self).__init__("Value for {0} not given or invalid."
                                                   "".format(key))
         elif valid_types is None:
-            super(ValidationError, self).__init__("Invalid value {} for {}"
+            super(ValidationError, self).__init__("Invalid value {0} for {1}"
                                                   "".format(value, key))
         else:
             super(ValidationError, self).__init__("{0} must be of type {1}, not {2}"

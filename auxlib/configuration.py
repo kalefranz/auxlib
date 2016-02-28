@@ -51,7 +51,7 @@ def make_env_key(app_name, key):
 @memoize
 def reverse_env_key(app_name, key):
     app = app_name.upper() + '_'
-    assert key.startswith(app), "{} is not a(n) {} environment key".format(key, app)
+    assert key.startswith(app), "{0} is not a(n) {1} environment key".format(key, app)
     return key[len(app):].lower()
 
 
@@ -233,7 +233,7 @@ class Configuration(object):
         if missing_keys:
             raise EnvironmentError("Required key(s) not found in environment\n"
                                    "  or configuration sources.\n"
-                                   "  Missing Keys: {}".format(list(missing_keys)))
+                                   "  Missing Keys: {0}".format(list(missing_keys)))
 
     def _clear_memoization(self):
         self.__dict__.pop('_memoized_results', None)

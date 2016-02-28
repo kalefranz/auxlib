@@ -16,8 +16,8 @@ class FactoryBase(object):
         cls._default_provider = (default_provider.__name__ if isinstance(default_provider, type)
                                  else str(default_provider))
         if not cls.is_registered_provider(cls._default_provider):
-            raise RuntimeError("{} is not a registered provider for "
-                               "{}".format(cls._default_provider, cls.__name__))
+            raise RuntimeError("{0} is not a registered provider for "
+                               "{1}".format(cls._default_provider, cls.__name__))
 
     @classmethod
     def get_instance(cls, provider=None):
@@ -66,7 +66,7 @@ class FactoryType(type):
         else:
             if not getattr(cls, 'do_cache', False):
                 return super(FactoryType, cls).__call__(*args)
-            cache_id = "{}".format(cls.__name__)
+            cache_id = "{0}".format(cls.__name__)
             try:
                 return cls.factory.cache[cache_id]
             except KeyError:
