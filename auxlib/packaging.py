@@ -58,7 +58,7 @@ def _get_version_from_git_tag():
 
 
 def is_git_repo(path, package):
-    if path == '/' or basename(path) == package:
+    if path == '/' or dirname(basename(path)) == package:
         return False
     else:
         return isdir(join(path, '.git')) or is_git_repo(dirname(path), package)

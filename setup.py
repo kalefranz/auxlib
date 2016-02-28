@@ -3,13 +3,11 @@ import os
 from setuptools import setup, find_packages
 import sys
 
+# When executing the setup.py, we need to be able to import ourselves, this
+# means that we need to add the src directory to the sys.path.
 here = os.path.abspath(os.path.dirname(__file__))
 src_dir = os.path.join(here, "auxlib")
-
-# When executing the setup.py, we need to be able to import ourselves, this
-# means that we need to add the src/ directory to the sys.path.
 sys.path.insert(0, src_dir)
-
 import auxlib  # NOQA
 
 requirements = [
