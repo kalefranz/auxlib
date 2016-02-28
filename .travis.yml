@@ -30,7 +30,9 @@ script:
       deactivate
       which python
       python --version
-      [[ $(python -c "import sys; print(hasattr(sys, 'real_prefix'))") == False ]] && make test-ci
+      [[ $(python -c "import sys; print(hasattr(sys, 'real_prefix'))") == False ]] \
+        && pip install pytest pytest-cov ddt testtools pycrypto tox \
+        && make test-ci
     fi
 
 after_success:
