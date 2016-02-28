@@ -19,4 +19,4 @@ __email__ = 'kale@franz.io'
 __homepage__ = 'https://github.com/kalefranz/auxlib'
 __license__ = "ISC"
 __copyright__ = "(c) 2015 Kale Franz. All rights reserved."
-__summary__ = locals().__doc__
+__summary__ = __doc__
