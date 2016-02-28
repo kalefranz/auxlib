@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
-import json
 from json import JSONEncoder
 import logging
-import sys
+from sys import stderr
 
 log = logging.getLogger(__name__)
 root_log = logging.getLogger()
@@ -24,7 +23,7 @@ def set_root_level(level=logging.INFO):
 def attach_stderr(level=None):
     has_stderr_handler = any(handler.name == 'stderr' for handler in root_log.handlers)
     if not has_stderr_handler:
-        handler = logging.StreamHandler(sys.stderr)
+        handler = logging.StreamHandler(stderr)
         handler.name = 'stderr'
         if level is not None:
             handler.setLevel(level)
@@ -47,7 +46,7 @@ def initialize_logging(level=logging.INFO):
     rootlogger = logging.getLogger()
     rootlogger.setLevel(level)
 
-    ch = logging.StreamHandler(sys.stderr)
+    ch = logging.StreamHandler(stderr)
     ch.setLevel(logging.DEBUG)
 
     ch.setFormatter(DEBUG_FORMATTER if level == logging.DEBUG else INFO_FORMATTER)

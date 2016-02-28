@@ -5,6 +5,7 @@ env:
   global:
     - PIP_DOWNLOAD_CACHE=$HOME/.pip-cache
     - secure: "vbmp+Jid6vuRUQsTMKiJprbW4T0N4WmAPfkEEmc1PsriH+99fXV8PEwaitEdhBNgrmAf1bFV7mtpuVfUEVeGgND3RVND9LUj/ep/+MFc5gFY6OmqcPngn7vcST5RTpoDqGX7hBrjpP55szwCwB8Vklo5IXZUxHL7hOT+blbkWvc="
+    - PYTHONUNBUFFERED=yes
   matrix:
     - TOXENV=py27
     - TOXENV=py34

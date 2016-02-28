@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
+from __future__ import print_function, division, absolute_import
 import logging
-import os
 import pkg_resources
 import site
 import sys
+
+from os.path import join, exists, dirname, expanduser, abspath, expandvars, normpath
 
 log = logging.getLogger(__name__)
 
@@ -37,7 +39,7 @@ def open_package_file(file_path, package_name):
     file_path = expand(file_path)
 
     # look for file at relative path
-    if os.path.exists(file_path):
+    if exists(file_path):
         log.info("found real file {}".format(file_path))
         return open(file_path)
 
@@ -49,8 +51,8 @@ def open_package_file(file_path, package_name):
     # look for file in site-packages
     package_path = package_name.replace('.', '/')
     for site_packages_path in site_packages_paths():
-        test_path = os.path.join(site_packages_path, package_path, file_path)
-        if os.path.exists(test_path):
+        test_path = join(site_packages_path, package_path, file_path)
+        if exists(test_path):
             log.info("found site-package file {} for package {}".format(file_path, package_name))
             return open(test_path)
 
@@ -60,4 +62,8 @@ def open_package_file(file_path, package_name):
 
 
 def expand(path):
-    return os.path.normpath(os.path.expanduser(os.path.expandvars(path)))
+    return normpath(expanduser(expandvars(path)))
+
+
+def absdirname(path):
+    return abspath(expanduser(dirname(path)))
