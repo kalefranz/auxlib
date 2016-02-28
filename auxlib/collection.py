@@ -1,4 +1,6 @@
+# -*- coding: utf-8 -*-
 """Common collection classes."""
+from __future__ import print_function, division, absolute_import
 
 
 # http://stackoverflow.com/a/14620633/2127762

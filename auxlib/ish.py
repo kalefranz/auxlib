@@ -1,4 +1,11 @@
 # -*- coding: utf-8 -*-
-import logging
+from __future__ import print_function, division, absolute_import
+from logging import getLogger
+from textwrap import dedent
 
-log = logging.getLogger(__name__)
+log = getLogger(__name__)
+
+
+def dals(string):
+    """dedent and left-strip"""
+    return dedent(string).lstrip()

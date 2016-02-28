@@ -5,6 +5,10 @@ test:
 	python setup.py test
 
 
+test-ci:
+	py.test --cov auxlib --cov-report xml --junitxml junit.xml tests
+
+
 clean:
 	@./scripts/clean
 

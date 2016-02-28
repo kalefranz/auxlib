@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
-import logging
-import os
+from __future__ import print_function, division, absolute_import
+from distutils.sysconfig import get_python_lib
+from logging import getLogger
 import pkg_resources
-import site
 import sys
 
-log = logging.getLogger(__name__)
+from os.path import join, exists, dirname, expanduser, abspath, expandvars, normpath
+
+log = getLogger(__name__)
 
 
 def site_packages_paths():
@@ -16,12 +18,12 @@ def site_packages_paths():
     else:
         # not in a virtualenv
         log.debug('searching outside virtualenv')
-        return site.getsitepackages()
+        return get_python_lib()
 
 
 class PackageFile(object):
 
-    def __init__(self, file_path, package_name=None):
+    def __init__(self, file_path, package_name):
         self.file_path = file_path
         self.package_name = package_name
 
@@ -37,27 +39,38 @@ def open_package_file(file_path, package_name):
     file_path = expand(file_path)
 
     # look for file at relative path
-    if os.path.exists(file_path):
-        log.info("found real file {}".format(file_path))
+    if exists(file_path):
+        log.info("found real file {0}".format(file_path))
         return open(file_path)
 
     # look for file in package resources
     if package_name and pkg_resources.resource_exists(package_name, file_path):
-        log.info("found package resource file {} for package {}".format(file_path, package_name))
+        log.info("found package resource file {0} for package {1}".format(file_path, package_name))
         return pkg_resources.resource_stream(package_name, file_path)
 
     # look for file in site-packages
-    package_path = package_name.replace('.', '/')
-    for site_packages_path in site_packages_paths():
-        test_path = os.path.join(site_packages_path, package_path, file_path)
-        if os.path.exists(test_path):
-            log.info("found site-package file {} for package {}".format(file_path, package_name))
-            return open(test_path)
+    package_path = find_file_in_site_packages(file_path, package_name)
+    if package_path:
+        return open(package_path)  # pragma: no cover
 
-    msg = "file for module [{}] cannot be found at path {}".format(package_name, file_path)
+    msg = "file for module [{0}] cannot be found at path {1}".format(package_name, file_path)
     log.error(msg)
     raise IOError(msg)
 
 
+def find_file_in_site_packages(file_path, package_name):
+    package_path = package_name.replace('.', '/')
+    for site_packages_path in site_packages_paths():
+        test_path = join(site_packages_path, package_path, file_path)
+        if exists(test_path):
+            log.info("found site-package file {0} for package {1}".format(file_path, package_name))
+            return test_path
+    return None
+
+
 def expand(path):
-    return os.path.normpath(os.path.expanduser(os.path.expandvars(path)))
+    return normpath(expanduser(expandvars(path)))
+
+
+def absdirname(path):
+    return abspath(expanduser(dirname(path)))

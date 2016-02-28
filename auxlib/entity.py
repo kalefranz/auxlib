@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """This module provides facilities for serializable, validatable, and type-enforcing
 domain objects.
 
@@ -76,13 +77,6 @@ of java primitives.  __set__ should take a "primitve" or "raw" value and create 
 or "programatically useable" value of it.  While __get__ should return the boxed value,
 dump in turn should unbox the value into a primitive or raw value.
 
-The process of boxing a complex object of nested primitive values:
-
-
-ComposableField uses another Entity as its type.
-
-
-
 
 
 
@@ -106,22 +100,24 @@ Examples:
 
 """
 from __future__ import absolute_import, division, print_function
+from datetime import datetime
+
 import collections
-import datetime
+
 from functools import reduce
-import json
-import logging
+from json import loads as json_loads
+from logging import getLogger
 
 from dateutil.parser import parse as dateparser
 from enum import Enum
 
 from ._vendor.five import with_metaclass, items, values
 from ._vendor.six import integer_types, string_types
-from .exceptions import ValidationError, Raise
 from .collection import AttrDict
+from .exceptions import ValidationError, Raise
 from .type_coercion import maybecall
 
-log = logging.getLogger(__name__)
+log = getLogger(__name__)
 
 KEY_OVERRIDES_MAP = "__key_overrides__"
 
@@ -175,7 +171,7 @@ class Field(object):
             elif self._nullable:
                 return None
             else:
-                raise AttributeError("A value for {} has not been set".format(self.name))
+                raise AttributeError("A value for {0} has not been set".format(self.name))
         return self.unbox(val)
 
     def __set__(self, instance, val):
@@ -265,7 +261,7 @@ class BooleanField(Field):
 
 
 class DateField(Field):
-    _type = datetime.datetime
+    _type = datetime
 
     def box(self, val):
         try:
@@ -281,6 +277,8 @@ class EnumField(Field):
 
     def __init__(self, enum_class, default=None, required=True, validation=None,
                  in_dump=True, nullable=False):
+        if not issubclass(enum_class, Enum):
+            raise ValidationError(None, msg="enum_class must be an instance of Enum")
         self._type = enum_class
         super(self.__class__, self).__init__(default, required, validation, in_dump, nullable)
 
@@ -307,6 +305,9 @@ class ListField(Field):
     def box(self, val):
         if val is None:
             return None
+        elif isinstance(val, string_types):
+            raise ValidationError("Attempted to assign a string to ListField {0}"
+                                  "".format(self.name))
         elif isinstance(val, collections.Iterable):
             et = self._element_type
             if isinstance(et, type) and issubclass(et, Entity):
@@ -315,13 +316,13 @@ class ListField(Field):
                 return tuple(val)
         else:
             raise ValidationError(val, msg="Cannot assign a non-iterable value to "
-                                           "{}".format(self.name))
+                                           "{0}".format(self.name))
 
     def unbox(self, val):
-        return tuple() if val is None else val
+        return tuple() if val is None and not self.nullable else val
 
     def dump(self, val):
-        if issubclass(self._element_type, Entity):
+        if isinstance(self._element_type, type) and issubclass(self._element_type, Entity):
             return tuple(v.dump() for v in val)
         else:
             return val
@@ -341,6 +342,8 @@ class ListField(Field):
 
 class MapField(Field):
     _type = dict
+    __eq__ = dict.__eq__
+    __hash__ = dict.__hash__
 
 
 class ComposableField(Field):
@@ -422,8 +425,9 @@ class Entity(object):
                 if key in getattr(self, KEY_OVERRIDES_MAP):
                     setattr(self, key, getattr(self, KEY_OVERRIDES_MAP)[key])
                 elif field.required and field.default is None:
-                    raise ValidationError(key, msg="{} requires a {} field. Instantiated with {}"
-                                                   "".format(self.__class__.__name__, key, kwargs))
+                    raise ValidationError(key, msg="{0} requires a {1} field. Instantiated with "
+                                                   "{2}".format(self.__class__.__name__,
+                                                                key, kwargs))
             except ValidationError:
                 if kwargs[key] is not None or field.required:
                     raise
@@ -441,7 +445,7 @@ class Entity(object):
 
     @classmethod
     def from_json(cls, json_str):
-        return cls(**json.loads(json_str))
+        return cls(**json_loads(json_str))
 
     @classmethod
     def load(cls, data_dict):
@@ -465,9 +469,9 @@ class Entity(object):
     def __repr__(self):
         def _repr(val):
             return repr(val.value) if isinstance(val, Enum) else repr(val)
-        return "{}({})".format(
+        return "{0}({1})".format(
             self.__class__.__name__,
-            ", ".join("{}={}".format(key, _repr(value)) for key, value in self.__dict__.items()))
+            ", ".join("{0}={1}".format(key, _repr(value)) for key, value in self.__dict__.items()))
 
     @classmethod
     def __register__(cls):
