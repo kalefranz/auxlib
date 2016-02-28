@@ -95,7 +95,7 @@ class BuildPyCommand(build_py):
         build_py.run(self)
         # locate .version in the new build/ directory and replace it with an updated value
         target_version_file = join(self.build_lib, self.distribution.metadata.name, ".version")
-        print("UPDATING %s" % target_version_file)
+        print("UPDATING {0}".format(target_version_file))
         with open(target_version_file, 'w') as f:
             f.write(self.distribution.metadata.version)
 

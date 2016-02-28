@@ -44,18 +44,18 @@ def memoize(func):
     Traceback (most recent call last):
     TypeError: Can't memoize a generator!
     """
-    func._result_cache = {}
+    func._result_cache = {}  # pylint: disable-msg=W0212
 
     @wraps(func)
     def _memoized_func(*args, **kwargs):
         key = (args, tuple(sorted(kwargs.items())))
-        if key in func._result_cache:
-            return func._result_cache[key]
+        if key in func._result_cache:  # pylint: disable-msg=W0212
+            return func._result_cache[key]  # pylint: disable-msg=W0212
         else:
             result = func(*args, **kwargs)
             if isinstance(result, types.GeneratorType):
                 raise TypeError("Can't memoize a generator!")
-            func._result_cache[key] = result
+            func._result_cache[key] = result  # pylint: disable-msg=W0212
             return result
 
     return _memoized_func
@@ -265,7 +265,7 @@ def memoizeproperty(func):
     return property(new_fget)
 
 
-class classproperty(object):  # NOQA
+class classproperty(object):  # pylint: disable-msg=C0103
     # from celery.five
 
     def __init__(self, getter=None, setter=None):
