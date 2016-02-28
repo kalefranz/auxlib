@@ -51,7 +51,7 @@ def open_package_file(file_path, package_name):
     # look for file in site-packages
     package_path = find_file_in_site_packages(file_path, package_name)
     if package_path:
-        return open(package_path)
+        return open(package_path)  # pragma: no cover
 
     msg = "file for module [{}] cannot be found at path {}".format(package_name, file_path)
     log.error(msg)
@@ -59,10 +59,7 @@ def open_package_file(file_path, package_name):
 
 
 def find_file_in_site_packages(file_path, package_name):
-    try:
-        package_path = package_name.replace('.', '/')
-    except AttributeError:
-        raise ValueError('package_name cannot be None')
+    package_path = package_name.replace('.', '/')
     for site_packages_path in site_packages_paths():
         test_path = join(site_packages_path, package_path, file_path)
         if exists(test_path):
