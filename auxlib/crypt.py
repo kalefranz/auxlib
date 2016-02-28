@@ -40,7 +40,7 @@ def encrypt(secret_key, data):
 def decrypt(secret_key, encryption_key_encrypted, encrypted_data):
     hashed_secret = generate_hash_from_secret(secret_key)
     message_encryption_key = aes_decrypt(hashed_secret, encryption_key_encrypted)
-    data = aes_decrypt(message_encryption_key, str(encrypted_data))
+    data = aes_decrypt(message_encryption_key, encrypted_data)
     return data
 
 
@@ -124,11 +124,11 @@ def aes_decrypt(base64_encryption_key, base64_data):
 
 def _pad(s):
     padding_bytes = AES_BLOCK_SIZE - len(s) % AES_BLOCK_SIZE
-    return s + chr(padding_bytes) * padding_bytes
+    return s + (chr(padding_bytes) * padding_bytes).encode('UTF-8')
 
 
 def _unpad(s):
-    return s[0:-ord(s[-1])]
+    return s[:-ord(s.decode('UTF-8')[-1])]
 
 
 def _extract_keys(key_str):

@@ -185,7 +185,13 @@ class EntityTests(unittest.TestCase):
         se_reloaded = SampleEntity.from_json(json.dumps(se_dumped))
         assert se == se_reloaded
 
-        json_str = json.dumps(se.dump())
+        del se_dumped['string_field_w_default']
+        se2 = SampleEntity.from_json(json.dumps(se_dumped))
+        assert se2.string_field_w_default == se.string_field_w_default
+
+        del se_dumped['string_field']
+        with ExpectedException(ValidationError):
+            SampleEntity.from_json(json.dumps(se_dumped))
 
 
 class MiscFieldTests(TestCase):
