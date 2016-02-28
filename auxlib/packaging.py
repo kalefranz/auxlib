@@ -50,7 +50,7 @@ def _get_version_from_git_tag():
     If that fails for any reason, return the first 7 chars of the changeset hash.
     """
     tag = _get_most_recent_git_tag()
-    m = match("(?P<xyz>\d+\.\d+\.\d+)(?:-(?P<dev>\d+)-(?P<hash>.+))?", tag)
+    m = match(b"(?P<xyz>\d+\.\d+\.\d+)(?:-(?P<dev>\d+)-(?P<hash>.+))?", tag)
 
     version = m.group('xyz')
     if m.group('dev') or _is_git_dirty():

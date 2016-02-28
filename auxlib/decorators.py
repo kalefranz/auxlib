@@ -265,7 +265,7 @@ def memoizeproperty(func):
     return property(new_fget)
 
 
-class classproperty(object):
+class classproperty(object):  # NOQA
     # from celery.five
 
     def __init__(self, getter=None, setter=None):
