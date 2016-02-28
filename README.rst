@@ -19,10 +19,6 @@ auxlib
    :target: https://scrutinizer-ci.com/g/kalefranz/auxlib/?branch=develop
    :alt: Scrutinizer Code Quality
 
-.. image:: https://codeclimate.com/github/kalefranz/auxlib/badges/gpa.svg
-   :target: https://codeclimate.com/github/kalefranz/auxlib
-   :alt: Code Climate
-
 .. image:: https://codeclimate.com/github/kalefranz/auxlib/badges/issue_count.svg
    :target: https://codeclimate.com/github/kalefranz/auxlib
    :alt: Issue Count

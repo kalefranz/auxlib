@@ -265,7 +265,7 @@ def memoizeproperty(func):
     return property(new_fget)
 
 
-class classproperty(object):  # pylint: disable-msg=C0103
+class classproperty(object):  # pylint: disable=C0103
     # from celery.five
 
     def __init__(self, getter=None, setter=None):
