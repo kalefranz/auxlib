@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function, division, absolute_import
-import logging
+from distutils.sysconfig import get_python_lib
+from logging import getLogger
 import pkg_resources
-import site
 import sys
 
 from os.path import join, exists, dirname, expanduser, abspath, expandvars, normpath
 
-log = logging.getLogger(__name__)
+log = getLogger(__name__)
 
 
 def site_packages_paths():
@@ -18,12 +18,12 @@ def site_packages_paths():
     else:
         # not in a virtualenv
         log.debug('searching outside virtualenv')
-        return site.getsitepackages()
+        return get_python_lib()
 
 
 class PackageFile(object):
 
-    def __init__(self, file_path, package_name=None):
+    def __init__(self, file_path, package_name):
         self.file_path = file_path
         self.package_name = package_name
 
@@ -49,16 +49,26 @@ def open_package_file(file_path, package_name):
         return pkg_resources.resource_stream(package_name, file_path)
 
     # look for file in site-packages
-    package_path = package_name.replace('.', '/')
-    for site_packages_path in site_packages_paths():
-        test_path = join(site_packages_path, package_path, file_path)
-        if exists(test_path):
-            log.info("found site-package file {} for package {}".format(file_path, package_name))
-            return open(test_path)
+    package_path = find_file_in_site_packages(file_path, package_name)
+    if package_path:
+        return open(package_path)
 
     msg = "file for module [{}] cannot be found at path {}".format(package_name, file_path)
     log.error(msg)
     raise IOError(msg)
+
+
+def find_file_in_site_packages(file_path, package_name):
+    try:
+        package_path = package_name.replace('.', '/')
+    except AttributeError:
+        raise ValueError('package_name cannot be None')
+    for site_packages_path in site_packages_paths():
+        test_path = join(site_packages_path, package_path, file_path)
+        if exists(test_path):
+            log.info("found site-package file {} for package {}".format(file_path, package_name))
+            return test_path
+    return None
 
 
 def expand(path):

@@ -93,9 +93,9 @@ class Configuration(object):
 
     """
 
-    def __init__(self, appname, config_sources=None, required_parameters=None):
+    def __init__(self, appname, config_sources=None, required_parameters=None, package=None):
         self.appname = appname
-        self.package = inspect.getmodule(self).__package__
+        self.package = package or inspect.getmodule(self).__package__
 
         # Indicates if sources are being loaded for the first time or are being reloaded.
         self.__initial_load = True

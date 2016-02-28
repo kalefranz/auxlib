@@ -8,8 +8,6 @@ from auxlib.factory import Factory
 class AppContext(Configuration):
     pass
 
-appcontext = AppContext('foo', __package__)
-
 
 class SomeFactory(Factory):
 
@@ -50,23 +48,27 @@ class AnotherImplementation(AnotherFactory):
 
 class GatewayBaseTests(TestCase):
 
+    def setUp(self):
+        super(GatewayBaseTests, self).setUp()
+        self.appcontext = AppContext('foo', package='auxlib')
+
     def test_get_instance_before_initialization(self):
         with ExpectedException(InitializationError):
             AnotherFactory.factory.get_instance()
         with ExpectedException(InitializationError):
             AnotherFactory.factory.get_instance()
         with ExpectedException(RuntimeError):
-            AnotherFactory.factory.initialize(appcontext, ThisImplementation)
-        AnotherFactory.factory.initialize(appcontext, AnotherImplementation)
+            AnotherFactory.factory.initialize(self.appcontext, ThisImplementation)
+        AnotherFactory.factory.initialize(self.appcontext, AnotherImplementation)
         self.assertTrue(AnotherFactory.factory.get_instance())
 
     def test_initialize_unregistered_class(self):
         with ExpectedException(RuntimeError):
-            SomeFactory.factory.initialize(appcontext, 'NotARegisteredClass')
+            SomeFactory.factory.initialize(self.appcontext, 'NotARegisteredClass')
 
     def test_cached_instances(self):
-        SomeFactory.factory.initialize(appcontext, 'ThatImplementation')
-        appcontext.set_env('test_value', 44)
+        SomeFactory.factory.initialize(self.appcontext, 'ThatImplementation')
+        self.appcontext.set_env('test_value', 44)
         self.assertEqual(44, SomeFactory().do_something())
         self.assertEqual(44, SomeFactory(ThisImplementation).do_something())
         self.assertEqual(44, SomeFactory('ThatImplementation').do_something())
@@ -74,7 +76,7 @@ class GatewayBaseTests(TestCase):
         self.assertEqual(44, SomeFactory.factory.get_instance(ThatImplementation).do_something())
         self.assertEqual(44, SomeFactory.factory.get_instance('ThisImplementation').do_something())
 
-        appcontext.set_env('test_value', 88)
+        self.appcontext.set_env('test_value', 88)
         self.assertEqual(44, SomeFactory().do_something())
         self.assertEqual(88, SomeFactory(ThisImplementation).do_something())
         self.assertEqual(44, SomeFactory('ThatImplementation').do_something())
