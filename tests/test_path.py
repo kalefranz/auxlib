@@ -46,12 +46,12 @@ class PackageFileTests(TestCase):
     def test_site_packages_paths(self):
         with open(find_file_in_site_packages('tz.py', 'dateutil')) as fh:
             lines = fh.readlines()
-            assert any(line.startswith(b'ZERO = datetime.timedelta(0)') for line in lines)
+            assert any(line.startswith('ZERO = datetime.timedelta(0)') for line in lines)
 
     def test_site_packages_paths_subdirectory(self):
         with open(find_file_in_site_packages('zoneinfo/__init__.py', 'dateutil')) as fh:
             lines = fh.readlines()
-            assert any(line.startswith(b'_ZONEFILENAME = "dateutil-zoneinfo.tar.gz"')
+            assert any(line.startswith('_ZONEFILENAME = "dateutil-zoneinfo.tar.gz"')
                        for line in lines)
 
     def test_no_file_found(self):

@@ -101,6 +101,9 @@ Examples:
 """
 from __future__ import absolute_import, division, print_function
 from datetime import datetime
+
+import collections
+
 from functools import reduce
 from json import loads as json_loads
 from logging import getLogger
@@ -112,7 +115,6 @@ from ._vendor.five import with_metaclass, items, values
 from ._vendor.six import integer_types, string_types
 from .collection import AttrDict
 from .exceptions import ValidationError, Raise
-from .ish import NonStringIterable
 from .type_coercion import maybecall
 
 log = getLogger(__name__)
@@ -303,7 +305,10 @@ class ListField(Field):
     def box(self, val):
         if val is None:
             return None
-        elif isinstance(val, NonStringIterable):
+        elif isinstance(val, string_types):
+            raise ValidationError("Attempted to assign a string to ListField {0}"
+                                  "".format(self.name))
+        elif isinstance(val, collections.Iterable):
             et = self._element_type
             if isinstance(et, type) and issubclass(et, Entity):
                 return tuple(v if isinstance(v, et) else et(**v) for v in val)

@@ -53,8 +53,9 @@ def _get_version_from_git_tag():
     m = match(b"(?P<xyz>\d+\.\d+\.\d+)(?:-(?P<dev>\d+)-(?P<hash>.+))?", tag)
     version = m.group('xyz').decode('utf-8')
     if m.group('dev') or _is_git_dirty():
-        version += ".dev{dev}+{hash}".format(dev=m.group('dev') or 0,
-                                             hash=m.group('hash') or _get_git_hash())
+        dev = (m.group('dev') or 0).decode('utf-8')
+        hash_ = (m.group('hash') or _get_git_hash()).decode('utf-8')
+        version += ".dev{dev}+{hash_}".format(dev=dev, hash_=hash_)
     return version
 
 
@@ -84,7 +85,7 @@ def get_version(file, package):
     # fall back to .version file
     version_from_pkg = _get_version_from_pkg_info(package)
     if version_from_pkg:
-        return version_from_pkg
+        return version_from_pkg.decode('utf-8')
 
     raise RuntimeError("Could not get package version (no .git or .version file)")
 
