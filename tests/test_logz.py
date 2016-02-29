@@ -25,15 +25,15 @@ class TestLoggingSetup(TestCase):
         initialize_logging()
         log.error("Very important message.")
 
-# class TestStringify(TestCase):
-#
-#     def basic_test(self):
-#         jenkins_url = "http://jenkins-{}.23andme.io".format(repo.replace('23andme/', '', 1))
-#         job_name = branch.replace('origin/', '', 1).split('/')[0]
-#         url = ("{}/job/{}_build/buildWithParameters".format(jenkins_url, job_name))
-#
-#         data = {"GIT_BRANCH": branch if branch.startswith('origin/') else "origin/{}".format(branch),
-#                 "GIT_HASH": commit_hash}
-#         req = Request('POST', url, data=data).prepare()
-#
-#         stringify(req)
+class TestStringify(TestCase):
+
+    def test_requests_stringify(self):
+        url = "http://jenkins.ci/job/awesome_build/buildWithParameters"
+        headers = {"Accpet": "application/json",
+                   "Content-Type": "application/json"}
+        data = {"GIT_BRANCH": "feature/awesome-feature",
+                "GIT_HASH": "abbacadaba1234567890"}
+        req = Request('POST', url, headers=headers, json=data).prepare()
+        strng = stringify(req)
+        log.info(strng)
+

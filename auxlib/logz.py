@@ -78,11 +78,11 @@ def stringify(obj):
             builder.append(body)
             builder.append('')
         return "\n".join(builder)
-    elif name == 'requests.PreparedRequest':
+    elif name == 'requests.models.PreparedRequest':
         builder = list()
         builder.append("{0} {1} {2}".format(obj.method, obj.path_url,
                                             obj.url.split(':')[0]))
-        builder += ["{0}: {1}".format(key, value) for key, value in obj.headers().items()]
+        builder += ["{0}: {1}".format(key, value) for key, value in obj.headers.items()]
         builder.append('')
         if obj.body:
             builder.append(obj.body)
