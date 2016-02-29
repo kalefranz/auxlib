@@ -33,25 +33,25 @@ class PackageFileTests(TestCase):
             assert any(line.startswith(b'PY3 = sys.version_info[0] == 3') for line in lines)
 
     def test_package_resources_paths(self):
-        with PackageFile('tz.py', 'dateutil') as fh:
+        with PackageFile('tz.py', 'dateutil.tz') as fh:
             lines = fh.readlines()
             assert any(line.startswith(b'ZERO = datetime.timedelta(0)') for line in lines)
 
     def test_package_resources_paths_subdirectory(self):
         with PackageFile('zoneinfo/__init__.py', 'dateutil') as fh:
             lines = fh.readlines()
-            assert any(line.startswith(b'_ZONEFILENAME = "dateutil-zoneinfo.tar.gz"')
+            assert any(line.startswith(b'ZONEFILENAME = "dateutil-zoneinfo.tar.gz"')
                        for line in lines)
 
     def test_site_packages_paths(self):
-        with open(find_file_in_site_packages('tz.py', 'dateutil')) as fh:
+        with open(find_file_in_site_packages('tz.py', 'dateutil.tz')) as fh:
             lines = fh.readlines()
             assert any(line.startswith('ZERO = datetime.timedelta(0)') for line in lines)
 
     def test_site_packages_paths_subdirectory(self):
         with open(find_file_in_site_packages('zoneinfo/__init__.py', 'dateutil')) as fh:
             lines = fh.readlines()
-            assert any(line.startswith('_ZONEFILENAME = "dateutil-zoneinfo.tar.gz"')
+            assert any(line.startswith('ZONEFILENAME = "dateutil-zoneinfo.tar.gz"')
                        for line in lines)
 
     def test_no_file_found(self):

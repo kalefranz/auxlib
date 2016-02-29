@@ -65,6 +65,8 @@ def find_file_in_site_packages(file_path, package_name):
         if exists(test_path):
             log.info("found site-package file {0} for package {1}".format(file_path, package_name))
             return test_path
+        else:
+            log.error("No file found at {0}.".format(test_path))
     return None
 
 
