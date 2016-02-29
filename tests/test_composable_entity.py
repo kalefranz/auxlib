@@ -130,3 +130,6 @@ class ClassFieldTests(testtools.TestCase):
 
         assert simplelist == SimpleList(**obj_dict)
         assert SimpleList(**simplelist.dump()) == SimpleList(**obj_dict)
+
+
+# TODO: test eq and hash

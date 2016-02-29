@@ -7,7 +7,6 @@ from auxlib import crypt
 from auxlib.crypt import AuthenticationError, encrypt, decrypt
 
 
-
 class TestBase64Encoding(TestCase):
 
     def test_encode(self):

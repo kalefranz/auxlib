@@ -20,7 +20,7 @@ def set_root_level(level=logging.INFO):
     root_log.setLevel(level)
 
 
-def attach_stderr(level=None):
+def attach_stderr(level=logging.INFO):
     has_stderr_handler = any(handler.name == 'stderr' for handler in root_log.handlers)
     if not has_stderr_handler:
         handler = logging.StreamHandler(stderr)
@@ -43,14 +43,7 @@ def detach_stderr():
 
 
 def initialize_logging(level=logging.INFO):
-    rootlogger = logging.getLogger()
-    rootlogger.setLevel(level)
-
-    ch = logging.StreamHandler(stderr)
-    ch.setLevel(logging.DEBUG)
-
-    ch.setFormatter(DEBUG_FORMATTER if level == logging.DEBUG else INFO_FORMATTER)
-    rootlogger.addHandler(ch)
+    attach_stderr(level)
 
 
 class DumpEncoder(JSONEncoder):

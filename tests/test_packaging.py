@@ -5,8 +5,8 @@ import os
 
 from testtools import TestCase
 
-from auxlib.packaging import _get_version_from_pkg_info, _is_git_dirty, _get_most_recent_git_tag, \
-    _get_git_hash, is_git_repo
+from auxlib.packaging import (_get_version_from_pkg_info, _is_git_dirty, _get_most_recent_git_tag,
+                              _get_git_hash, is_git_repo)
 
 
 class TestPackaging(TestCase):

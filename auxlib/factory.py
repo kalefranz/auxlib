@@ -2,6 +2,7 @@
 for various types of data gateways.
 """
 from __future__ import absolute_import, division, print_function
+
 from ._vendor.five import with_metaclass
 from .exceptions import InitializationError
 

@@ -17,8 +17,8 @@ def site_packages_paths():
         return [p for p in sys.path if p.endswith('site-packages')]
     else:
         # not in a virtualenv
-        log.debug('searching outside virtualenv')
-        return get_python_lib()
+        log.debug('searching outside virtualenv')  # pragma: no cover
+        return get_python_lib()  # pragma: no cover
 
 
 class PackageFile(object):

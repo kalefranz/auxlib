@@ -30,7 +30,7 @@ script:
       which python
       python --version
       [[ $(python -c "import sys; print(hasattr(sys, 'real_prefix'))") == False ]] \
-        && pip install pytest pytest-cov ddt testtools pycrypto tox pyyaml python-dateutil \
+        && pip install pytest pytest-cov ddt testtools pycrypto tox pyyaml python-dateutil requests \
         && make test-ci
     fi
 

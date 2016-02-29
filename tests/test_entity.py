@@ -1,18 +1,17 @@
 # -*- coding: utf-8 -*-
 import datetime
-import json
-
-import dateutil.parser
 from enum import Enum
 import time
 import unittest
 
+import dateutil.parser
 from testtools import TestCase, ExpectedException
 
 from auxlib._vendor.six import string_types, integer_types
 from auxlib.entity import (Entity, StringField, IntField, EnumField, ListField,
                            DateField, BooleanField)
 from auxlib.exceptions import ValidationError
+from auxlib.logz import jsondumps
 
 
 class Color(Enum):
@@ -182,16 +181,16 @@ class EntityTests(unittest.TestCase):
         se = SampleEntity(string_field='bazaar', integer_field=28, enum_field=ChooseOne.B)
         se_dumped = se.dump()
 
-        se_reloaded = SampleEntity.from_json(json.dumps(se_dumped))
+        se_reloaded = SampleEntity.from_json(jsondumps(se))
         assert se == se_reloaded
 
         del se_dumped['string_field_w_default']
-        se2 = SampleEntity.from_json(json.dumps(se_dumped))
+        se2 = SampleEntity.from_json(jsondumps(se_dumped))
         assert se2.string_field_w_default == se.string_field_w_default
 
         del se_dumped['string_field']
         with ExpectedException(ValidationError):
-            SampleEntity.from_json(json.dumps(se_dumped))
+            SampleEntity.from_json(jsondumps(se_dumped))
 
 
 class MiscFieldTests(TestCase):

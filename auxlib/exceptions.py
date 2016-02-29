@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
-import logging
+from logging import getLogger
 
-log = logging.getLogger(__name__)
+log = getLogger(__name__)
 
 
-def Raise(exception):  # noqa
+def Raise(exception):  # NOQA
     raise exception
 
 
