@@ -3,11 +3,14 @@ from __future__ import print_function, division, absolute_import
 from distutils.sysconfig import get_python_lib
 from logging import getLogger
 import pkg_resources
+from os.path import (abspath, dirname, exists, expanduser, expandvars, join, normpath, sep)
 import sys
 
-from os.path import join, exists, dirname, expanduser, abspath, expandvars, normpath
 
 log = getLogger(__name__)
+
+
+ROOT_PATH = abspath(sep)
 
 
 def site_packages_paths():

@@ -9,7 +9,7 @@ from setuptools.command.test import test as TestCommand
 from subprocess import CalledProcessError, check_call, check_output
 import sys
 
-from .path import absdirname, PackageFile
+from .path import absdirname, PackageFile, ROOT_PATH
 
 log = getLogger(__name__)
 
@@ -55,12 +55,12 @@ def _get_version_from_git_tag():
     if m.group('dev') or _is_git_dirty():
         dev = (m.group('dev') or 0).decode('utf-8')
         hash_ = (m.group('hash') or _get_git_hash()).decode('utf-8')
-        version += ".dev{dev}+{hash_}".format(dev=dev, hash_=hash_)
+        version += ".dev{dev}.{hash_}".format(dev=dev, hash_=hash_)
     return version
 
 
 def is_git_repo(path, package):
-    if path == '/' or dirname(basename(path)) == package:
+    if path == ROOT_PATH or dirname(basename(path)) == package:
         return False
     else:
         return isdir(join(path, '.git')) or is_git_repo(dirname(path), package)
@@ -68,14 +68,15 @@ def is_git_repo(path, package):
 
 def get_version(file, package):
     """Returns a version string for the current package, derived
-    either from the SCM (git currently) or from PKG-INFO.
+    either from git or from a .version file.
 
     This function is expected to run in two contexts. In a development
-    context, where .git/ exists, the version is pulled from git tags
-    and written into PKG-INFO to create an sdist or bdist.
+    context, where .git/ exists, the version is pulled from git tags.
+    Using the BuildPyCommand and SDistCommand classes for cmdclass in
+    setup.py will write a .version file into any dist.
 
-    In an installation context, the PKG-INFO file written above is the
-    source of version string.
+    In an installed context, the .version file written at dist build
+    time is the source of version information.
 
     """
     here = absdirname(file)
@@ -100,7 +101,7 @@ class BuildPyCommand(build_py):
             f.write(self.distribution.metadata.version)
 
 
-class SdistCommand(sdist):
+class SDistCommand(sdist):
     def run(self):
         return sdist.run(self)
 
@@ -135,7 +136,3 @@ class Tox(TestCommand):
             args = ''
         errno = tox.cmdline(args=args)
         sys.exit(errno)
-
-
-if __name__ == "__main__":
-    print(get_version(__file__, __package__))
