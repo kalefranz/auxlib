@@ -14,9 +14,9 @@ clean:
 
 
 release: clean
-	@echo "version=$(VERSION)"
-	@git add --all
-	@git commit -m "release $(VERSION)"
+	# @echo "version=$(VERSION)"
+	# @git add --all
+	# @git commit -m "release $(VERSION)"
 	@git tag "$(VERSION)"
 	git push && git push --tags
 	python setup.py release
