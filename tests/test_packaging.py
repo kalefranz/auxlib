@@ -7,6 +7,7 @@ from testtools import TestCase
 
 from auxlib.packaging import (_get_version_from_pkg_info, _is_git_dirty, _get_most_recent_git_tag,
                               _get_git_hash, is_git_repo)
+from auxlib.path import ROOT_PATH
 
 
 class TestPackaging(TestCase):
@@ -31,7 +32,7 @@ class TestPackaging(TestCase):
         assert len(hash) == 7
 
     def test_not_git_repo(self):
-        assert not is_git_repo('/var/log/', 'dontmatter')
+        assert not is_git_repo(ROOT_PATH, 'dontmatter')
 
 
 class TestPackagingNotGitRepo(TestCase):
