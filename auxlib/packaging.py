@@ -136,7 +136,3 @@ class Tox(TestCommand):
             args = ''
         errno = tox.cmdline(args=args)
         sys.exit(errno)
-
-
-if __name__ == "__main__":
-    print(get_version(__file__, __package__))

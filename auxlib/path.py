@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function, division, absolute_import
-
 from distutils.sysconfig import get_python_lib
 from logging import getLogger
 import pkg_resources
