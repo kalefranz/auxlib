@@ -64,7 +64,7 @@ setup(
     },
     cmdclass={
         'build_py': auxlib.BuildPyCommand,
-        'sdist': auxlib.SdistCommand,
+        'sdist': auxlib.SDistCommand,
         'test': auxlib.Tox,
     },
 )
