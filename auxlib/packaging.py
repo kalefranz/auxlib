@@ -9,7 +9,7 @@ from setuptools.command.test import test as TestCommand
 from subprocess import CalledProcessError, check_call, check_output
 import sys
 
-from .path import absdirname, PackageFile
+from .path import absdirname, PackageFile, ROOT_PATH
 
 log = getLogger(__name__)
 
@@ -60,7 +60,7 @@ def _get_version_from_git_tag():
 
 
 def is_git_repo(path, package):
-    if path == '/' or dirname(basename(path)) == package:
+    if path == ROOT_PATH or dirname(basename(path)) == package:
         return False
     else:
         return isdir(join(path, '.git')) or is_git_repo(dirname(path), package)
