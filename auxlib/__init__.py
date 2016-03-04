@@ -1,8 +1,12 @@
 # -*- coding: utf-8 -*-
 """auxiliary library to the python standard library"""
 from __future__ import absolute_import, division, print_function
+from logging import getLogger, NullHandler
 
-from .packaging import BuildPyCommand, SDistCommand, Tox, get_version
+# don't mess up logging for users
+getLogger('auxlib').addHandler(NullHandler())
+
+from .packaging import BuildPyCommand, SDistCommand, Tox, get_version  # NOQA
 
 __all__ = [
     "__title__", "__version__", "__author__",
