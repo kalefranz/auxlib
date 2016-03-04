@@ -23,16 +23,16 @@ class TestPackaging(TestCase):
                 os.remove('.version')
 
     def test_is_git_dirty(self):
-        result = _is_git_dirty()
+        result = _is_git_dirty(os.getcwd())
         assert result is True or result is False
 
 
     def test_get_git_hash(self):
-        hash = _get_git_hash()
+        hash = _get_git_hash(os.getcwd())
         assert len(hash) == 7
 
     def test_not_git_repo(self):
-        assert not is_git_repo(ROOT_PATH, 'dontmatter')
+        assert not is_git_repo(ROOT_PATH)
 
 
 class TestPackagingNotGitRepo(TestCase):
@@ -47,9 +47,9 @@ class TestPackagingNotGitRepo(TestCase):
         os.chdir(self.cwd)
 
     def test_get_most_recent_git_tag_no_repo(self):
-        tag = _get_most_recent_git_tag()
+        tag = _get_most_recent_git_tag(os.getcwd())
         assert tag == "0.0.0.0"
 
     def test_get_git_hash_no_repo(self):
-        assert _get_git_hash() == 0
+        assert _get_git_hash(os.getcwd()) == 0
 

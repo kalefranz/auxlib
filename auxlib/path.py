@@ -2,10 +2,11 @@
 from __future__ import print_function, division, absolute_import
 from distutils.sysconfig import get_python_lib
 from logging import getLogger
+from os import chdir, getcwd
+from os.path import (abspath, dirname, exists, expanduser, expandvars, isdir, isfile, join,
+                     normpath, sep)
 import pkg_resources
-from os.path import (abspath, dirname, exists, expanduser, expandvars, join, normpath, sep)
 import sys
-
 
 log = getLogger(__name__)
 
@@ -36,6 +37,22 @@ class PackageFile(object):
 
     def __exit__(self, *args):
         self.file_handle.close()
+
+
+class ChangePath(object):
+
+    def __init__(self, path):
+        self.dirpath = dirname(path) if isfile(path) else path
+        if not isdir(self.dirpath):
+            raise IOError('File or directory not found: {0}'.format(path))
+
+    def __enter__(self):
+        self.cwd = getcwd()
+        chdir(self.dirpath)
+        return self
+
+    def __exit__(self, *args):
+        chdir(self.cwd)
 
 
 def open_package_file(file_path, package_name):
