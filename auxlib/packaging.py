@@ -2,12 +2,17 @@
 from __future__ import print_function, division, absolute_import
 from logging import getLogger
 from os import remove
-
-from os.path import join
+from os.path import isdir, isfile, join
 from re import match
-from setuptools.command.build_py import build_py
-from setuptools.command.sdist import sdist
-from setuptools.command.test import test as TestCommand
+try:
+    from setuptools.command.build_py import build_py
+    from setuptools.command.sdist import sdist
+    from setuptools.command.test import test as TestCommand
+except ImportError:
+    from distutils.command.build_py import build_py
+    from distutils.command.sdist import sdist
+    TestCommand = object
+
 from subprocess import CalledProcessError, check_call, check_output, call
 import sys
 
@@ -91,7 +96,9 @@ def get_version(file, package):
     raise RuntimeError("Could not get package version (no .git or .version file)")
 
 
-def write_version_into_init(target_init_file, version):
+def write_version_into_init(target_dir, version):
+    target_init_file = join(target_dir, "__init__.py")
+    assert isfile(target_init_file), "File not found: {0}".format(target_init_file)
     with open(target_init_file, 'r') as f:
         init_lines = f.readlines()
     for q in range(len(init_lines)):
@@ -105,18 +112,27 @@ def write_version_into_init(target_init_file, version):
         f.write(''.join(l for l in init_lines if l is not None))
 
 
+def write_version_file(target_dir, version):
+    assert isdir(target_dir), "Directory not found: {0}".format(target_dir)
+    target_file = join(target_dir, ".version")
+    with open(target_file, 'w') as f:
+        f.write(version)
+
+
 class BuildPyCommand(build_py):
     def run(self):
         build_py.run(self)
-        target_init_file = join(self.build_lib, self.distribution.metadata.name, "__init__.py")
-        write_version_into_init(target_init_file, self.distribution.metadata.version)
+        target_dir = join(self.build_lib, self.distribution.metadata.name)
+        write_version_into_init(target_dir, self.distribution.metadata.version)
+        write_version_file(target_dir, self.distribution.metadata.version)
 
 
 class SDistCommand(sdist):
     def make_release_tree(self, base_dir, files):
         sdist.make_release_tree(self, base_dir, files)
-        target_init_file = join(base_dir, self.distribution.metadata.name, "__init__.py")
-        write_version_into_init(target_init_file, self.distribution.metadata.version)
+        target_dir = join(base_dir, self.distribution.metadata.name)
+        write_version_into_init(target_dir, self.distribution.metadata.version)
+        write_version_file(target_dir, self.distribution.metadata.version)
 
 
 class Tox(TestCommand):
