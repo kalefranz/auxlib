@@ -83,11 +83,10 @@ def get_version(file, package):
         version_from_pkg = _get_version_from_pkg_info(package)
         return version_from_pkg.decode('UTF-8') if hasattr(version_from_pkg, 'decode') else version_from_pkg  # NOQA
     except IOError:
-        print('no .version file found; fall back to git repo')
-    # no .version file found; fall back to git repo
-    here = absdirname(file)
-    if is_git_repo(here):
-        return _get_version_from_git_tag(here)
+        # no .version file found; fall back to git repo
+        here = absdirname(file)
+        if is_git_repo(here):
+            return _get_version_from_git_tag(here)
 
     raise RuntimeError("Could not get package version (no .git or .version file)")
 
