@@ -15,8 +15,8 @@ try:
 except ImportError:
     from fractions import gcd
 
-from six import advance_iterator, integer_types
-from six.moves import _thread
+from ..six import advance_iterator, integer_types
+from ..six.moves import _thread
 import heapq
 
 # For warning about deprecation of until and count

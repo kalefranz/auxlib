@@ -2,7 +2,7 @@
 import datetime
 import struct
 
-from six.moves import winreg
+from ...moves import winreg
 
 try:
     import ctypes

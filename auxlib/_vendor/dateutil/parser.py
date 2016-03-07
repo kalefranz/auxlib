@@ -37,7 +37,7 @@ import re
 from io import StringIO
 from calendar import monthrange, isleap
 
-from six import text_type, binary_type, integer_types
+from ..six import text_type, binary_type, integer_types
 
 from . import relativedelta
 from . import tz

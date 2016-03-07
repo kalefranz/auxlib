@@ -13,7 +13,7 @@ import time
 import sys
 import os
 
-from six import string_types, PY3
+from ...six import string_types, PY3
 from .__init__ import tzname_in_python2
 
 try:

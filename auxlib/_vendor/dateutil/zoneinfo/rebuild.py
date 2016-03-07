@@ -5,7 +5,7 @@ import shutil
 import json
 from subprocess import check_call
 
-from dateutil.zoneinfo import tar_open, METADATA_FN, ZONEFILENAME
+from ..zoneinfo import tar_open, METADATA_FN, ZONEFILENAME
 
 
 def rebuild(filename, tag=None, format="gz", zonegroups=[], metadata=None):

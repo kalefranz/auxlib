@@ -1,5 +1,5 @@
 from .tz import *
-from six import PY3
+from ...six import PY3
 
 __all__ = ["tzutc", "tzoffset", "tzlocal", "tzfile", "tzrange",
            "tzstr", "tzical", "tzwin", "tzwinlocal", "gettz"]

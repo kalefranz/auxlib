@@ -12,7 +12,7 @@ from pkgutil import get_data
 from io import BytesIO
 from contextlib import closing
 
-from dateutil.tz import tzfile
+from ..tz import tzfile
 
 __all__ = ["gettz", "gettz_db_metadata", "rebuild"]
 

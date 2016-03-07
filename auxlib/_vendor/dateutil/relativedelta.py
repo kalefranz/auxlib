@@ -2,7 +2,7 @@
 import datetime
 import calendar
 
-from six import integer_types
+from ..six import integer_types
 from warnings import warn
 
 __all__ = ["relativedelta", "MO", "TU", "WE", "TH", "FR", "SA", "SU"]
