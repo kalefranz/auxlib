@@ -11,7 +11,6 @@ sys.path.insert(0, src_dir)
 import auxlib  # NOQA
 
 requirements = [
-    "python-dateutil",
     "PyYAML",
 ]
 
@@ -58,7 +57,7 @@ setup(
     ],
 
     install_requires=requirements,
-    tests_require=["tox"],
+    tests_require=["tox", "python-dateutil"],
     extras_require={
        'crypt': ["pycrypto"],
     },

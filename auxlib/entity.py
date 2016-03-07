@@ -108,9 +108,9 @@ from functools import reduce
 from json import loads as json_loads
 from logging import getLogger
 
-from dateutil.parser import parse as dateparser
 from enum import Enum
 
+from ._vendor.dateutil.parser import parse as dateparser
 from ._vendor.five import with_metaclass, items, values
 from ._vendor.six import integer_types, string_types
 from .collection import AttrDict
