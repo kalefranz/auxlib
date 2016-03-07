@@ -57,7 +57,7 @@ setup(
     ],
 
     install_requires=requirements,
-    tests_require=["tox", "python-dateutil"],
+    tests_require=["tox"],
     extras_require={
        'crypt': ["pycrypto"],
     },
