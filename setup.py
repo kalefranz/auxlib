@@ -11,7 +11,6 @@ sys.path.insert(0, src_dir)
 import auxlib  # NOQA
 
 requirements = [
-    "python-dateutil",
     "PyYAML",
 ]
 
