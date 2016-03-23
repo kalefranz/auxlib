@@ -110,8 +110,7 @@ Examples:
     >>> # but a car can't have 5 wheels!
     >>> car.wheels = 5
     Traceback (most recent call last):
-    ...
-    auxlib.exceptions.ValidationError: Invalid value 5 for wheels
+    ValidationError: Invalid value 5 for wheels
 
     >>> # we can call .dump() on car, and just get back a standard python dict
     >>> #   actually, it's ordereddict to preserve attribute declaration order
@@ -127,8 +126,7 @@ Examples:
     >>> # green cars aren't allowed
     >>> car.color = "green"
     Traceback (most recent call last):
-    ...
-    auxlib.exceptions.ValidationError: 'green' is not a valid Color
+    ValidationError: 'green' is not a valid Color
 
     >>> # but black cars are!
     >>> car.color = "black"
@@ -220,8 +218,7 @@ Examples:
     CarBattery(first_charge=datetime.datetime(2016, 3, 23, 0, 0))
     >>> battery.first_charge = None
     Traceback (most recent call last):
-    ...
-    auxlib.exceptions.ValidationError: Value for first_charge not given or invalid.
+    ValidationError: Value for first_charge not given or invalid.
     >>> del battery.first_charge
     >>> battery
     CarBattery()
@@ -229,7 +226,6 @@ Examples:
     # latest_charge can be null, but it can't be deleted. The default value is a callable.
     >>> del battery.latest_charge
     Traceback (most recent call last):
-    ...
     AttributeError: The latest_charge field is required and cannot be deleted.
     >>> battery.latest_charge = None
     >>> battery.json()
@@ -240,8 +236,7 @@ Examples:
     datetime.datetime(1982, 2, 17, 0, 0)
     >>> battery.expiration = None
     Traceback (most recent call last):
-    ...
-    auxlib.exceptions.ValidationError: Value for expiration not given or invalid.
+    ValidationError: Value for expiration not given or invalid.
     >>> del battery.expiration
     >>> battery.json()
     '{"latest_charge": null}'
