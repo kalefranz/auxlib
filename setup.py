@@ -10,9 +10,7 @@ src_dir = os.path.join(here, "auxlib")
 sys.path.insert(0, src_dir)
 import auxlib  # NOQA
 
-requirements = [
-    "PyYAML",
-]
+requirements = []
 
 if sys.version_info < (3, 4):
     requirements.append("enum34")
@@ -59,7 +57,8 @@ setup(
     install_requires=requirements,
     tests_require=["tox"],
     extras_require={
-       'crypt': ["pycrypto"],
+        'crypt': ["pycrypto"],
+        'yaml': ["pyyaml"],
     },
     cmdclass={
         'build_py': auxlib.BuildPyCommand,

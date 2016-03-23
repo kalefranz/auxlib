@@ -2,25 +2,29 @@
 import collections
 import re
 
-from ._vendor.five import string
-from ._vendor.six import integer_types, string_types
+from ._vendor.six import integer_types, string_types, iteritems, text_type
 from .decorators import memoize
 
 
 BOOLISH = ("true", "yes", "on", "y")
 BOOLABLE_TYPES = integer_types + (bool, float, complex, list, set, dict, tuple)
 
-RE_BOOLEAN_TRUE = re.compile(r'^true$|^yes$|^on$', re.IGNORECASE)
-RE_BOOLEAN_FALSE = re.compile(r'^false$|^no$|^off$', re.IGNORECASE)
-RE_INTEGER = re.compile(r'^[0-9]+$')
-RE_FLOAT = re.compile(r'^[0-9]+\.[0-9]+$')
-RE_NONE = re.compile(r'^None$', re.IGNORECASE)
 
-REGEX_TYPE_MAP = dict({RE_BOOLEAN_TRUE: True,
-                       RE_BOOLEAN_FALSE: False,
-                       RE_INTEGER: int,
-                       RE_FLOAT: float,
-                       RE_NONE: None, })
+def _generate_regex_type_map(func=None):
+    RE_BOOLEAN_TRUE = re.compile(r'^true$|^yes$|^on$', re.IGNORECASE)
+    RE_BOOLEAN_FALSE = re.compile(r'^false$|^no$|^off$', re.IGNORECASE)
+    RE_INTEGER = re.compile(r'^[0-9]+$')
+    RE_FLOAT = re.compile(r'^[0-9]+\.[0-9]+$')
+    RE_NONE = re.compile(r'^None$', re.IGNORECASE)
+
+    REGEX_TYPE_MAP = dict({RE_BOOLEAN_TRUE: True,
+                           RE_BOOLEAN_FALSE: False,
+                           RE_INTEGER: int,
+                           RE_FLOAT: float,
+                           RE_NONE: None, })
+
+    func.REGEX_TYPE_MAP = REGEX_TYPE_MAP
+    return REGEX_TYPE_MAP
 
 
 def boolify(value):
@@ -50,7 +54,7 @@ def boolify(value):
     if isinstance(value, BOOLABLE_TYPES):
         return bool(value)
     # try to coerce string into number
-    val = string(value).strip().lower().replace('.', '', 1)
+    val = text_type(value).strip().lower().replace('.', '', 1)
     if val.isnumeric():
         return bool(float(val))
     elif val in BOOLISH:  # now look for truthy strings
@@ -98,7 +102,8 @@ def typify(value, type_hint=None):
         return boolify(value) if type_hint == bool else type_hint(value)
 
     # no type hint, so try to match with the regex patterns
-    for regex, typish in REGEX_TYPE_MAP.items():
+    for regex, typish in iteritems(getattr(typify, 'REGEX_TYPE_MAP', None)
+                                   or _generate_regex_type_map(typify)):
         if regex.match(value):
             return typish(value) if callable(typish) else typish
 

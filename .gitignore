@@ -23,6 +23,7 @@ parts/
 sdist/
 var/
 ve/
+venv/
 *.egg-info/
 .installed.cfg
 *.egg

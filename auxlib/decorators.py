@@ -43,7 +43,7 @@ def memoize(func):
     ...
     >>> range_iter(3)
     Traceback (most recent call last):
-    TypeError: Can't memoize a generator!
+    TypeError: Can't memoize a generator or non-hashable object!
     """
     func._result_cache = {}  # pylint: disable-msg=W0212
 
@@ -54,8 +54,8 @@ def memoize(func):
             return func._result_cache[key]  # pylint: disable-msg=W0212
         else:
             result = func(*args, **kwargs)
-            if isinstance(result, GeneratorType) or isinstance(result, Hashable):
-                raise TypeError("Can't memoize a generator!")
+            if isinstance(result, GeneratorType) or not isinstance(result, Hashable):
+                raise TypeError("Can't memoize a generator or non-hashable object!")
             func._result_cache[key] = result  # pylint: disable-msg=W0212
             return result
 
@@ -112,7 +112,7 @@ def memoizemethod(method):
     (3, 4, 5)
     >>> foo.range_iter(6)
     Traceback (most recent call last):
-    TypeError: Can't memoize a generator!
+    TypeError: Can't memoize a generator or non-hashable object!
     """
 
     @wraps(method)
@@ -140,8 +140,8 @@ def memoizemethod(method):
                     result = None  # is this the right thing to do?  happened during py3 conversion
                 else:
                     raise
-            if isinstance(result, types.GeneratorType):
-                raise TypeError("Can't memoize a generator!")
+            if isinstance(result, GeneratorType) or not isinstance(result, Hashable):
+                raise TypeError("Can't memoize a generator or non-hashable object!")
             return memoized_results.setdefault(key, result)
 
     return _wrapper

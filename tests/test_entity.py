@@ -4,9 +4,9 @@ from enum import Enum
 import time
 import unittest
 
-import dateutil.parser
 from testtools import TestCase, ExpectedException
 
+from auxlib._vendor.dateutil.parser import parse
 from auxlib._vendor.six import string_types, integer_types
 from auxlib.entity import (Entity, StringField, IntField, EnumField, ListField,
                            DateField, BooleanField)
@@ -562,11 +562,11 @@ class DateFieldTests(TestCase):
     def test_assignment_error(self):
         df = DateEntity(field=NOW.isoformat())
         with ExpectedException(ValidationError):
-            df.field_w_default_w_validation = dateutil.parser.parse('2014')
+            df.field_w_default_w_validation = parse('2014')
 
         with ExpectedException(ValidationError):
             DateEntity(field=NOW.isoformat(),
-                       field_w_default_w_validation=dateutil.parser.parse('2014').isoformat())
+                       field_w_default_w_validation=parse('2014').isoformat())
 
         with ExpectedException(ValidationError):
             DateEntity(field='not parseable as a date')
@@ -583,7 +583,7 @@ class DateFieldTests(TestCase):
         de1 = de.field_w_default_callable.isoformat()
         time.sleep(1)
         de2 = de.field_w_default_callable.isoformat()
-        assert (dateutil.parser.parse(de1) < dateutil.parser.parse(de2))
+        assert (parse(de1) < parse(de2))
 
     def test_nullable_field(self):
         de = DateEntity(field=NOW)

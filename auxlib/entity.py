@@ -100,13 +100,12 @@ Examples:
 
 """
 from __future__ import absolute_import, division, print_function
+
 from datetime import datetime
-
-import collections
-
 from functools import reduce
 from json import loads as json_loads
 from logging import getLogger
+import collections
 
 from enum import Enum
 
@@ -491,7 +490,7 @@ class Entity(object):
     def __eq__(self, other):
         if self.__class__ != other.__class__:
             return False
-        rando_default = 19274656290
+        rando_default = 19274656290  # need an arbitrary but definite value if field does not exist
         return all(getattr(self, field, rando_default) == getattr(other, field, rando_default)
                    for field in self.__fields__)
 
