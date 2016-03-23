@@ -269,7 +269,8 @@ class EnumFieldTests(TestCase):
             ee.enum_field_w_default_wo_required = None
 
         del ee.enum_field_w_default_wo_required
-        assert ee.enum_field_w_default_wo_required.value == 'green'
+        with ExpectedException(AttributeError):
+            ee.enum_field_w_default_wo_required
 
     def test_default(self):
         ee = EnumEntity(enum_field=Color.Red)
@@ -375,7 +376,8 @@ class StringFieldTests(TestCase):
         del sf.field_w_default_wo_required
         sf.field_wo_default_wo_required = "birch"
 
-        assert sf.field_w_default_wo_required == "elm"
+        with ExpectedException(AttributeError):
+            sf.field_w_default_wo_required
         assert sf.field_wo_default_wo_required == "birch"
 
         with ExpectedException(ValidationError):
@@ -412,7 +414,8 @@ class StringFieldTests(TestCase):
             sf.field_w_default_wo_required = None
 
         del sf.field_w_default_wo_required
-        assert sf.field_w_default_wo_required == "elm"
+        with ExpectedException(AttributeError):
+            sf.field_w_default_wo_required
 
         with ExpectedException(ValidationError):
             sf.field_w_validation = "coconut"
@@ -517,6 +520,7 @@ class StringFieldTests(TestCase):
 
     def test_rule(self):
         pass
+        # TODO
         # field_wo_default_wo_required
         # If required=False and nullable=True, field will be in dump if field==None.
 

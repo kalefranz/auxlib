@@ -27,6 +27,8 @@ Comparison to schematics:
 
 TODO:
   - alternate field names
+  - add dump_if_null field option
+  - consider adding immutability, maybe ImmutableEntity
 
 
 Optional Field Properties:
@@ -47,6 +49,10 @@ Behaviors:
   - Setting a value to None doesn't "unset" a value.  (That's what del is for.)  And you can't
     del a value if required=True, nullable=False, default=None.  That should raise
     OperationNotAllowedError.
+
+  - If a field is not required, del does *not* "unmask" the default value.  Instead, del
+    removes the value from the object entirely.  To get back the default value, need to recreate
+    the object.  Entity.from_objects(old_object)
 
 
   - Disabling in_dump is a "hard" setting, in that with it disabled the field will never get
@@ -190,9 +196,53 @@ Examples:
     >>> sum(c.weight for c in company_fleet.cars)
     12727.26
 
-    # ## Chapter 3 ##
-    # del attr vers set to None
+    # ## Chapter 3: The del and null weeds ##
+    >>> old_date = lambda: dateparse('1982-02-17')
+    >>> class CarBattery(Entity):
+    ...     # NOTE: default value can be a callable!
+    ...     first_charge = DateField(required=False)  # default=None, nullable=False
+    ...     latest_charge = DateField(default=old_date, nullable=True)  # required=True
+    ...     expiration = DateField(default=old_date, required=False, nullable=False)
 
+    # starting point
+    >>> battery = CarBattery()
+    >>> battery
+    CarBattery()
+    >>> battery.json()
+    '{"latest_charge": "1982-02-17T00:00:00", "expiration": "1982-02-17T00:00:00"}'
+
+    # first_charge is not assigned a default value. Once one is assigned, it can be deleted,
+    #   but it can't be made null.
+    >>> battery.first_charge = dateparse('2016-03-23')
+    >>> battery
+    CarBattery(first_charge=datetime.datetime(2016, 3, 23, 0, 0))
+    >>> battery.first_charge = None
+    Traceback (most recent call last):
+    ...
+    auxlib.exceptions.ValidationError: Value for first_charge not given or invalid.
+    >>> del battery.first_charge
+    >>> battery
+    CarBattery()
+
+    # latest_charge can be null, but it can't be deleted. The default value is a callable.
+    >>> del battery.latest_charge
+    Traceback (most recent call last):
+    ...
+    AttributeError: The latest_charge field is required and cannot be deleted.
+    >>> battery.latest_charge = None
+    >>> battery.json()
+    '{"latest_charge": null, "expiration": "1982-02-17T00:00:00"}'
+
+    # expiration is assigned by default, can't be made null, but can be deleted.
+    >>> battery.expiration
+    datetime.datetime(1982, 2, 17, 0, 0)
+    >>> battery.expiration = None
+    Traceback (most recent call last):
+    ...
+    auxlib.exceptions.ValidationError: Value for expiration not given or invalid.
+    >>> del battery.expiration
+    >>> battery.json()
+    '{"latest_charge": null}'
 
 
 """
@@ -207,7 +257,7 @@ import collections
 
 from enum import Enum
 
-from ._vendor.dateutil.parser import parse as dateparser
+from ._vendor.dateutil.parser import parse as dateparse
 from ._vendor.five import with_metaclass, items, values
 from ._vendor.six import integer_types, string_types
 from .collection import AttrDict
@@ -272,7 +322,7 @@ class Field(object):
                 val = instance.__dict__[self.name]
         except AttributeError:
             log.error("The name attribute has not been set for this field.")
-            raise
+            raise AttributeError("The name attribute has not been set for this field.")
         except KeyError:
             if self.default is not None:
                 val = maybecall(self.default)  # default *can* be a callable
@@ -280,6 +330,9 @@ class Field(object):
                 return None
             else:
                 raise AttributeError("A value for {0} has not been set".format(self.name))
+        if val is None and not self.nullable:
+            # means the "tricky edge case" was activted in __delete__
+            raise AttributeError("The {0} field has been deleted.".format(self.name))
         return self.unbox(val)
 
     def __set__(self, instance, val):
@@ -288,7 +341,17 @@ class Field(object):
         instance.__dict__[self.name] = self.validate(self.box(val))
 
     def __delete__(self, instance):
-        instance.__dict__.pop(self.name, None)
+        if self.required:
+            raise AttributeError("The {0} field is required and cannot be deleted."
+                                 .format(self.name))
+        elif not self.nullable:
+            # tricky edge case
+            # given a field Field(default='some value', required=False, nullable=False)
+            # works together with Entity.dump() logic for selecting fields to include in dump
+            # `if value is not None or field.nullable`
+            instance.__dict__[self.name] = None
+        else:
+            instance.__dict__.pop(self.name, None)
 
     def box(self, val):
         return val
@@ -372,7 +435,7 @@ class DateField(Field):
 
     def box(self, val):
         try:
-            return dateparser(val) if isinstance(val, string_types) else val
+            return dateparse(val) if isinstance(val, string_types) else val
         except ValueError as e:
             raise ValidationError(val, msg=e)
 
@@ -584,7 +647,9 @@ class Entity(object):
             return repr(val.value) if isinstance(val, Enum) else repr(val)
         return "{0}({1})".format(
             self.__class__.__name__,
-            ", ".join("{0}={1}".format(key, _repr(value)) for key, value in self.__dict__.items()))
+            ", ".join("{0}={1}".format(key, _repr(value))
+                      for key, value in self.__dict__.items()
+                      if not (not self.__fields__[key].nullable and value is None)))
 
     @classmethod
     def __register__(cls):
