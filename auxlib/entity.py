@@ -71,41 +71,123 @@ Behaviors:
 
 
 
-
-Fields are doing something very similar to boxing and unboxing
-of java primitives.  __set__ should take a "primitve" or "raw" value and create a "boxed"
-or "programatically useable" value of it.  While __get__ should return the boxed value,
-dump in turn should unbox the value into a primitive or raw value.
-
-
-
-
 Examples:
     >>> class Color(Enum):
     ...     blue = 0
     ...     black = 1
     ...     red = 2
-    >>> class Truck(Entity):
+    >>> class Car(Entity):
     ...     color = EnumField(Color)
-    ...     weight = NumberField()
-    ...     wheels = IntField(4, in_dump=False)
+    ...     weight = NumberField(required=False)
+    ...     wheels = IntField(default=4, validation=lambda x: 3 <= x <= 4)
 
-    >>> truck = Truck(weight=44.4, color=Color.blue, wheels=18)
-    >>> truck.wheels
-    18
-    >>> truck.color
-    <Color.blue: 0>
-    >>> sorted(truck.dump().items())
-    [('color', 0), ('weight', 44.4)]
+    >>> # create a new car object
+    >>> car = Car(color=Color.blue, weight=4242.42)
+
+    >>> # it has 4 wheels, all by default
+    >>> car.wheels
+    4
+
+    >>> # but a car can't have 5 wheels!
+    >>> car.wheels = 5
+    Traceback (most recent call last):
+    ...
+    auxlib.exceptions.ValidationError: Invalid value 5 for wheels
+
+    # we can call .dump() on car, and just get back a simple python dict
+    >>> type(car.dump())
+    <class 'dict'>
+    >>> sorted(car.dump().items())
+    [('color', 0), ('weight', 4242.42), ('wheels', 4)]
+
+    # and json too
+    >>> car.json(sort_keys=True)
+    '{"color": 0, "weight": 4242.42, "wheels": 4}'
+
+    # green cars aren't allowed
+    >>> car.color = "green"
+    Traceback (most recent call last):
+    ...
+    auxlib.exceptions.ValidationError: 'green' is not a valid Color
+
+    # but black cars are!
+    >>> car.color = "black"
+    >>> car.color
+    <Color.black: 1>
+
+    # car.color really is an enum, promise
+    >>> type(car.color)
+    <enum 'Color'>
+
+    # let's do a round-trip marshalling of this thing
+    >>> same_car = Car.from_json(json.dumps(car.dump()))  # or equally Car.from_json(car.json()))
+    >>> same_car == car
+    True
+
+    # actually, they're two different instances
+    >>> same_car is not car
+    True
+
+    # this works too
+    >>> cloned_car = Car(**car.dump())
+    >>> cloned_car == car
+    True
+
+    # now let's get fancy
+    >>> class Fleet(Entity):
+    ...     cars = ListField(Car)
+    ...     boss_car = ComposableField(Car)
+
+    # here's our fleet of company cars
+    >>> company_fleet = Fleet(boss_car=Car(color='red'), cars=[car, same_car, cloned_car])
+    >>> company_fleet.pretty_json()  #doctest: +SKIP
+    {
+      "boss_car": {
+        "color": 2,
+        "wheels": 4
+      },
+      "cars": [
+        {
+          "color": 1,
+          "weight": 4242.42,
+          "wheels": 4
+        },
+        {
+          "color": 1,
+          "weight": 4242.42,
+          "wheels": 4
+        },
+        {
+          "color": 1,
+          "weight": 4242.42,
+          "wheels": 4
+        }
+      ]
+    }
+
+    # the boss' car is red of course (and it's still an Enum)
+    >>> company_fleet.boss_car.color.name
+    'red'
+
+    # and there are three cars left for the employees
+    >>> len(company_fleet.cars)
+    3
+
+    # because we can
+    >>> sum(c.weight for c in company_fleet.cars)
+    12727.26
+
+
 
 """
 from __future__ import absolute_import, division, print_function
 
 from datetime import datetime
 from functools import reduce
-from json import loads as json_loads
+from json import loads as json_loads, dumps as json_dumps
 from logging import getLogger
 import collections
+import json
 
 from enum import Enum
 
@@ -123,6 +205,10 @@ KEY_OVERRIDES_MAP = "__key_overrides__"
 
 class Field(object):
     """
+    Fields are doing something very similar to boxing and unboxing
+    of c#/java primitives.  __set__ should take a "primitve" or "raw" value and create a "boxed"
+    or "programatically useable" value of it.  While __get__ should return the boxed value,
+    dump in turn should unbox the value into a primitive or raw value.
 
     Arguments:
         types_ (primitive literal or type or sequence of types):
@@ -282,11 +368,17 @@ class EnumField(Field):
 
     def box(self, val):
         if val is None:
+            # let the required/nullable logic handle validation for this case
             return None
         try:
+            # try to box using val as an Enum name
             return val if isinstance(val, self._type) else self._type(val)
-        except ValueError as e:
-            raise ValidationError(val, msg=e)
+        except ValueError as e1:
+            try:
+                # try to box using val as an Enum value
+                return self._type[val]
+            except KeyError:
+                raise ValidationError(val, msg=e1)
 
     def dump(self, val):
         return None if val is None else val.value
@@ -474,6 +566,13 @@ class Entity(object):
     @classmethod
     def __register__(cls):
         pass
+
+    def json(self, indent=None, separators=None, sort_keys=False, **kwargs):
+        return json_dumps(self.dump(), indent=indent, separators=separators,
+                          sort_keys=sort_keys, **kwargs)
+
+    def pretty_json(self, indent=2, separators=(',', ': '), sort_keys=True, **kwargs):
+        return self.json(indent=indent, separators=separators, sort_keys=sort_keys, **kwargs)
 
     def dump(self):
         return {field.name: field.dump(value)

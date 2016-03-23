@@ -35,6 +35,7 @@ class AssignmentError(AuxlibError, AttributeError):
 class ValidationError(AuxlibError, TypeError):
 
     def __init__(self, key, value=None, valid_types=None, msg=None):
+        self.__cause__ = None  # in python3 don't chain ValidationError exceptions
         if msg is not None:
             super(ValidationError, self).__init__(msg)
         elif value is None:
