@@ -88,18 +88,20 @@ Behaviors:
 
 
 Examples:
-    # ## Chapter 1 ##
+    # ## Chapter 1: Entity and Field Basics ##
     >>> class Color(Enum):
     ...     blue = 0
     ...     black = 1
     ...     red = 2
     >>> class Car(Entity):
-    ...     color = EnumField(Color)
     ...     weight = NumberField(required=False)
     ...     wheels = IntField(default=4, validation=lambda x: 3 <= x <= 4)
+    ...     color = EnumField(Color)
 
     >>> # create a new car object
     >>> car = Car(color=Color.blue, weight=4242.42)
+    >>> car
+    Car(weight=4242.42, color=0)
 
     >>> # it has 4 wheels, all by default
     >>> car.wheels
@@ -111,53 +113,53 @@ Examples:
     ...
     auxlib.exceptions.ValidationError: Invalid value 5 for wheels
 
-    # we can call .dump() on car, and just get back a standard python dict
-    # actually, it's ordereddict to preserve attribute declaration order
+    >>> # we can call .dump() on car, and just get back a standard python dict
+    >>> #   actually, it's ordereddict to preserve attribute declaration order
     >>> type(car.dump())
     <class 'collections.OrderedDict'>
     >>> car.dump()
-    OrderedDict([('color', 0), ('weight', 4242.42), ('wheels', 4)])
+    OrderedDict([('weight', 4242.42), ('wheels', 4), ('color', 0)])
 
-    # and json too
+    >>> # and json too
     >>> car.json()
-    '{"color": 0, "weight": 4242.42, "wheels": 4}'
+    '{"weight": 4242.42, "wheels": 4, "color": 0}'
 
-    # green cars aren't allowed
+    >>> # green cars aren't allowed
     >>> car.color = "green"
     Traceback (most recent call last):
     ...
     auxlib.exceptions.ValidationError: 'green' is not a valid Color
 
-    # but black cars are!
+    >>> # but black cars are!
     >>> car.color = "black"
     >>> car.color
     <Color.black: 1>
 
-    # car.color really is an enum, promise
+    >>> # car.color really is an enum, promise
     >>> type(car.color)
     <enum 'Color'>
 
-    # let's do a round-trip marshalling of this thing
+    >>> # let's do a round-trip marshalling of this thing
     >>> same_car = Car.from_json(car.json())  # or equally Car.from_json(json.dumps(car.dump()))
     >>> same_car == car
     True
 
-    # actually, they're two different instances
+    >>> # actually, they're two different instances
     >>> same_car is not car
     True
 
-    # this works too
+    >>> # this works too
     >>> cloned_car = Car(**car.dump())
     >>> cloned_car == car
     True
 
-    # ## Chapter 2 ##
-    # now let's get fancy
+    # ## Chapter 2: Entity and Field Composition ##
+    >>> # now let's get fancy
     >>> class Fleet(Entity):
     ...     boss_car = ComposableField(Car)
     ...     cars = ListField(Car)
 
-    # here's our fleet of company cars
+    >>> # here's our fleet of company cars
     >>> company_fleet = Fleet(boss_car=Car(color='red'), cars=[car, same_car, cloned_car])
     >>> company_fleet.pretty_json()  #doctest: +SKIP
     {
@@ -184,15 +186,15 @@ Examples:
       ]
     }
 
-    # the boss' car is red of course (and it's still an Enum)
+    >>> # the boss' car is red of course (and it's still an Enum)
     >>> company_fleet.boss_car.color.name
     'red'
 
-    # and there are three cars left for the employees
+    >>> # and there are three cars left for the employees
     >>> len(company_fleet.cars)
     3
 
-    # because we can
+    >>> # because we can
     >>> sum(c.weight for c in company_fleet.cars)
     12727.26
 
@@ -643,13 +645,25 @@ class Entity(object):
                 raise  # pragma: no cover
 
     def __repr__(self):
-        def _repr(val):
+        def _exists(key):
+            try:
+                getattr(self, key)
+                return True
+            except AttributeError:
+                return False
+
+        def _val(key):
+            val = getattr(self, key)
             return repr(val.value) if isinstance(val, Enum) else repr(val)
-        return "{0}({1})".format(
-            self.__class__.__name__,
-            ", ".join("{0}={1}".format(key, _repr(value))
-                      for key, value in self.__dict__.items()
-                      if not (not self.__fields__[key].nullable and value is None)))
+
+        def _sort_helper(key):
+            field = self.__fields__.get(key)
+            return field._order_helper if field is not None else -1
+
+        kwarg_str = ", ".join("{0}={1}".format(key, _val(key))
+                              for key in sorted(self.__dict__, key=_sort_helper)
+                              if _exists(key))
+        return "{0}({1})".format(self.__class__.__name__, kwarg_str)
 
     @classmethod
     def __register__(cls):
