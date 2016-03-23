@@ -1,5 +1,6 @@
 from __future__ import absolute_import, division, print_function
-import types
+from collections import Hashable
+from types import GeneratorType
 
 from ._vendor.six import wraps
 
@@ -53,7 +54,7 @@ def memoize(func):
             return func._result_cache[key]  # pylint: disable-msg=W0212
         else:
             result = func(*args, **kwargs)
-            if isinstance(result, types.GeneratorType):
+            if isinstance(result, GeneratorType) or isinstance(result, Hashable):
                 raise TypeError("Can't memoize a generator!")
             func._result_cache[key] = result  # pylint: disable-msg=W0212
             return result
