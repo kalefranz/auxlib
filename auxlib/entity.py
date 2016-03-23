@@ -17,6 +17,16 @@ This module gives us:
   - rock solid foundational domain objects
 
 
+Comparison to schematics:
+  - no get_mock_object method (yet)
+  - no context-dependent serialization or MultilingualStringType
+  - name = StringType(serialized_name='person_name')
+  - name = StringType(serialize_when_none=False)
+  - more flexible validation error messages
+
+
+TODO:
+  - alternate field names
 
 
 Optional Field Properties:
@@ -72,6 +82,7 @@ Behaviors:
 
 
 Examples:
+    # ## Chapter 1 ##
     >>> class Color(Enum):
     ...     blue = 0
     ...     black = 1
@@ -94,14 +105,15 @@ Examples:
     ...
     auxlib.exceptions.ValidationError: Invalid value 5 for wheels
 
-    # we can call .dump() on car, and just get back a simple python dict
+    # we can call .dump() on car, and just get back a standard python dict
+    # actually, it's ordereddict to preserve attribute declaration order
     >>> type(car.dump())
-    <class 'dict'>
-    >>> sorted(car.dump().items())
-    [('color', 0), ('weight', 4242.42), ('wheels', 4)]
+    <class 'collections.OrderedDict'>
+    >>> car.dump()
+    OrderedDict([('color', 0), ('weight', 4242.42), ('wheels', 4)])
 
     # and json too
-    >>> car.json(sort_keys=True)
+    >>> car.json()
     '{"color": 0, "weight": 4242.42, "wheels": 4}'
 
     # green cars aren't allowed
@@ -120,7 +132,7 @@ Examples:
     <enum 'Color'>
 
     # let's do a round-trip marshalling of this thing
-    >>> same_car = Car.from_json(json.dumps(car.dump()))  # or equally Car.from_json(car.json()))
+    >>> same_car = Car.from_json(car.json())  # or equally Car.from_json(json.dumps(car.dump()))
     >>> same_car == car
     True
 
@@ -133,10 +145,11 @@ Examples:
     >>> cloned_car == car
     True
 
+    # ## Chapter 2 ##
     # now let's get fancy
     >>> class Fleet(Entity):
-    ...     cars = ListField(Car)
     ...     boss_car = ComposableField(Car)
+    ...     cars = ListField(Car)
 
     # here's our fleet of company cars
     >>> company_fleet = Fleet(boss_car=Car(color='red'), cars=[car, same_car, cloned_car])
@@ -177,17 +190,20 @@ Examples:
     >>> sum(c.weight for c in company_fleet.cars)
     12727.26
 
+    # ## Chapter 3 ##
+    # del attr vers set to None
+
 
 
 """
 from __future__ import absolute_import, division, print_function
 
+from collections import OrderedDict as odict
 from datetime import datetime
 from functools import reduce
 from json import loads as json_loads, dumps as json_dumps
 from logging import getLogger
 import collections
-import json
 
 from enum import Enum
 
@@ -219,6 +235,10 @@ class Field(object):
         dump (boolean, optional):
     """
 
+    # Used to track order of field declarations. Supporting python 2.7, so can't rely
+    #   on __prepare__.  Strategy lifted from http://stackoverflow.com/a/4460034/2127762
+    _order_helper = 0
+
     def __init__(self, default=None, required=True, validation=None, in_dump=True, nullable=False):
         self._default = default if callable(default) else self.box(default)
         self._required = required
@@ -227,6 +247,9 @@ class Field(object):
         self._nullable = nullable
         if default is not None:
             self.validate(self.box(maybecall(default)))
+
+        self._order_helper = Field._order_helper
+        Field._order_helper += 1
 
     @property
     def name(self):
@@ -489,10 +512,11 @@ class EntityType(type):
 
     def __init__(cls, name, bases, attr):
         super(EntityType, cls).__init__(name, bases, attr)
-        cls.__fields__ = dict(cls.__fields__) if hasattr(cls, '__fields__') else dict()
-        cls.__fields__.update({name: field.set_name(name)
-                               for name, field in cls.__dict__.items()
-                               if isinstance(field, Field)})
+        cls.__fields__ = odict(cls.__fields__) if hasattr(cls, '__fields__') else odict()
+        cls.__fields__.update(sorted(((name, field.set_name(name))
+                                      for name, field in cls.__dict__.items()
+                                      if isinstance(field, Field)),
+                                     key=lambda item: item[1]._order_helper))
         if hasattr(cls, '__register__'):
             cls.__register__()
 
@@ -503,8 +527,7 @@ class EntityType(type):
 
 @with_metaclass(EntityType)
 class Entity(object):
-    __fields__ = dict()
-    # TODO: add arg order to fields like in enum34
+    __fields__ = odict()
 
     def __init__(self, **kwargs):
         for key, field in items(self.__fields__):
@@ -567,23 +590,23 @@ class Entity(object):
     def __register__(cls):
         pass
 
-    def json(self, indent=None, separators=None, sort_keys=False, **kwargs):
-        return json_dumps(self.dump(), indent=indent, separators=separators,
-                          sort_keys=sort_keys, **kwargs)
+    def json(self, indent=None, separators=None, **kwargs):
+        return json_dumps(self.dump(), indent=indent, separators=separators, **kwargs)
 
-    def pretty_json(self, indent=2, separators=(',', ': '), sort_keys=True, **kwargs):
-        return self.json(indent=indent, separators=separators, sort_keys=sort_keys, **kwargs)
+    def pretty_json(self, indent=2, separators=(',', ': '), **kwargs):
+        return self.json(indent=indent, separators=separators, **kwargs)
 
     def dump(self):
-        return {field.name: field.dump(value)
-                for field, value in ((field, getattr(self, field.name, None))
-                                     for field in self.__dump_fields())
-                if value is not None or field.nullable}
+        return odict((field.name, field.dump(value))
+                     for field, value in ((field, getattr(self, field.name, None))
+                                          for field in self.__dump_fields())
+                     if value is not None or field.nullable)
 
     @classmethod
     def __dump_fields(cls):
         if '__dump_fields_cache' not in cls.__dict__:
-            cls.__dump_fields_cache = {field for field in values(cls.__fields__) if field.in_dump}
+            cls.__dump_fields_cache = tuple(field for field in values(cls.__fields__)
+                                            if field.in_dump)
         return cls.__dump_fields_cache
 
     def __eq__(self, other):
