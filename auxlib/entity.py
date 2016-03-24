@@ -22,18 +22,19 @@ Tutorial:
     4
 
     >>> # but a car can't have 5 wheels!
+    >>> #  the `validation=` field is a simple callable that returns a boolean based on validity
     >>> car.wheels = 5
     Traceback (most recent call last):
     ValidationError: Invalid value 5 for wheels
 
     >>> # we can call .dump() on car, and just get back a standard python dict
-    >>> #   actually, it's ordereddict to preserve attribute declaration order
+    >>> #   actually, it's an ordereddict to match attribute declaration order
     >>> type(car.dump())
     <class 'collections.OrderedDict'>
     >>> car.dump()
     OrderedDict([('weight', 4242.42), ('wheels', 4), ('color', 0)])
 
-    >>> # and json too
+    >>> # and json too (note the order!)
     >>> car.json()
     '{"weight": 4242.42, "wheels": 4, "color": 0}'
 
@@ -51,6 +52,13 @@ Tutorial:
     >>> type(car.color)
     <enum 'Color'>
 
+    >>> # enum assignment can be with any of (and preferentially) (1) an enum literal,
+    >>> #   (2) a valid enum value, or (3) a valid enum name
+    >>> car.color = Color.blue; car.color.value
+    0
+    >>> car.color = 1; car.color.name
+    'black'
+
     >>> # let's do a round-trip marshalling of this thing
     >>> same_car = Car.from_json(car.json())  # or equally Car.from_json(json.dumps(car.dump()))
     >>> same_car == car
@@ -65,9 +73,29 @@ Tutorial:
     >>> cloned_car == car
     True
 
+    >>> # while we're at it, these are all equivalent
+    >>> Car(**car.dump()) == \
+            Car.from_objects(car) == \
+            Car.from_objects({"weight": 4242.42, "wheels": 4, "color": 1}) == \
+            Car.from_json('{"weight": 4242.42, "color": 1}')
+    True
+
+    >>> # .from_objects() even lets you stack and combine objects
+    >>> class DumbClass:
+    ...     color = 0
+    ...     wheels = 3
+    >>> Car.from_objects(DumbClass(), dict(weight=2222, color=1))
+    Car(weight=2222, wheels=3, color=0)
+    >>> # and also pass kwargs that override properties pulled off any objects
+    >>> Car.from_objects(DumbClass(), {'weight': 2222, 'color': 1}, color=2, weight=33)
+    Car(weight=33, wheels=3, color=2)
+
 
     # ## Chapter 2: Entity and Field Composition ##
     >>> # now let's get fancy
+    >>> # a ComposableField "nests" another valid Entity
+    >>> # a ListField's first argument is a "generic" type, which can be a valid Entity,
+    >>> #   any python primitive type, or a list of Entities/types
     >>> class Fleet(Entity):
     ...     boss_car = ComposableField(Car)
     ...     cars = ListField(Car)
@@ -77,24 +105,24 @@ Tutorial:
     >>> company_fleet.pretty_json()  #doctest: +SKIP
     {
       "boss_car": {
-        "color": 2,
         "wheels": 4
+        "color": 2,
       },
       "cars": [
         {
-          "color": 1,
           "weight": 4242.42,
           "wheels": 4
+          "color": 1,
         },
         {
-          "color": 1,
           "weight": 4242.42,
           "wheels": 4
+          "color": 1,
         },
         {
-          "color": 1,
           "weight": 4242.42,
           "wheels": 4
+          "color": 1,
         }
       ]
     }
@@ -270,8 +298,7 @@ Behaviors:
 
 
   - Setting a value to None doesn't "unset" a value.  (That's what del is for.)  And you can't
-    del a value if required=True, nullable=False, default=None.  That should raise
-    OperationNotAllowedError.
+    del a value if required=True, nullable=False, default=None.
 
   - If a field is not required, del does *not* "unmask" the default value.  Instead, del
     removes the value from the object entirely.  To get back the default value, need to recreate
