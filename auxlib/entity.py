@@ -152,10 +152,6 @@ Tutorial:
     Traceback (most recent call last):
     AttributeError: Assignment not allowed. ImmutableCar is immutable.
 
-    >>> del icar.wheels
-    Traceback (most recent call last):
-    AttributeError: Deletion not allowed. ImmutableCar is immutable.
-
     >>> class FixedWheelCar(Entity):
     ...     wheels = IntField(default=4, immutable=True)
     ...     color = EnumField(Color)
@@ -231,11 +227,12 @@ from json import loads as json_loads, dumps as json_dumps
 from logging import getLogger
 
 from ._vendor.dateutil.parser import parse as dateparse
-from ._vendor.five import with_metaclass, items, values
-from ._vendor.six import integer_types, string_types
+from ._vendor.five import (with_metaclass, items, values, int_types as integer_types,
+                           string_t as string_types)
 from .collection import AttrDict
 from .exceptions import ValidationError, Raise
 from .ish import find_or_none
+from .logz import DumpEncoder
 from .type_coercion import maybecall
 
 log = getLogger(__name__)
@@ -269,12 +266,14 @@ This module gives us:
   - rock solid foundational domain objects
 
 
-Deficiencies to schematics:
-  - no get_mock_object method (yet)
-  - no context-dependent serialization or MultilingualStringType (yet)
+Current deficiencies to schematics:
+  - no get_mock_object method
+  - no context-dependent serialization or MultilingualStringType
   - name = StringType(serialized_name='person_name')
   - name = StringType(serialize_when_none=False)
   - more flexible validation error messages
+  - field validation can depend on other fields
+  - 'roles' containing blacklists for .dump() and .json()
 
 
 TODO:
@@ -453,10 +452,6 @@ class Field(object):
 
     @property
     def required(self):
-        return self.is_required
-
-    @property
-    def is_required(self):
         return self._required
 
     @property
@@ -753,7 +748,7 @@ class Entity(object):
         pass
 
     def json(self, indent=None, separators=None, **kwargs):
-        return json_dumps(self.dump(), indent=indent, separators=separators, **kwargs)
+        return json_dumps(self, indent=indent, separators=separators, cls=DumpEncoder, **kwargs)
 
     def pretty_json(self, indent=2, separators=(',', ': '), **kwargs):
         return self.json(indent=indent, separators=separators, **kwargs)

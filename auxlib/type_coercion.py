@@ -2,7 +2,8 @@
 import collections
 import re
 
-from ._vendor.six import integer_types, string_types, iteritems, text_type
+from ._vendor.five import (int_types as integer_types, string_t as string_types, items,
+                           text_t as text_type)
 from .decorators import memoize
 
 
@@ -104,8 +105,8 @@ def typify(value, type_hint=None):
         return boolify(value) if type_hint == bool else type_hint(value)
 
     # no type hint, so try to match with the regex patterns
-    for regex, typish in iteritems(getattr(typify, 'REGEX_TYPE_MAP', None)
-                                   or _generate_regex_type_map(typify)):
+    for regex, typish in items(getattr(typify, 'REGEX_TYPE_MAP', None)
+                               or _generate_regex_type_map(typify)):
         if regex.match(value):
             return typish(value) if callable(typish) else typish
 

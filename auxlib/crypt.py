@@ -20,8 +20,7 @@ except ImportError:  # pragma: no cover
                                       'which is not installed in the current '
                                       'environment.')  # pragma: no cover
 
-from ._vendor.six import text_type
-
+from ._vendor.five import text_t as text_type
 from .exceptions import AuthenticationError
 
 log = logging.getLogger(__name__)

@@ -20,12 +20,12 @@ with open(os.path.join(here, "README.rst")) as f:
     long_description = f.read()
 
 setup(
-    name=auxlib.__title__,
+    name=auxlib.__name__,
     version=auxlib.__version__,
 
     author=auxlib.__author__,
     author_email=auxlib.__email__,
-    url=auxlib.__homepage__,
+    url=auxlib.__url__,
     license=auxlib.__license__,
 
     description=auxlib.__summary__,

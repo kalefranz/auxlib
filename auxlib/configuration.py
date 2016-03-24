@@ -30,7 +30,7 @@ import logging
 import os
 import signal
 
-from ._vendor.six import string_types
+from ._vendor.five import string_t as string_types
 from .type_coercion import listify
 from .decorators import memoize, memoizemethod
 from .exceptions import AssignmentError, NotFoundError
