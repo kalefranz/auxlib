@@ -159,7 +159,7 @@ Tutorial:
     >>> class ImmutableCar(ImmutableEntity):
     ...     wheels = IntField(default=4, validation=lambda x: 3 <= x <= 4)
     ...     color = EnumField(Color)
-    >>> icar = ImmutableCar(wheels=3, color='blue')
+    >>> icar = ImmutableCar.from_objects({'wheels': 3, 'color': 'blue'})
     >>> icar
     ImmutableCar(wheels=3, color=0)
 
@@ -174,7 +174,7 @@ Tutorial:
     >>> class FixedWheelCar(Entity):
     ...     wheels = IntField(default=4, immutable=True)
     ...     color = EnumField(Color)
-    >>> fwcar = FixedWheelCar(wheels=3, color='blue')
+    >>> fwcar = FixedWheelCar.from_objects(icar)
     >>> fwcar.json()
     '{"wheels": 3, "color": 0}'
 
@@ -666,14 +666,15 @@ class Entity(object):
         self.validate()
 
     @classmethod
-    def create_from_objects(cls, *objects, **override_fields):
+    def from_objects(cls, *objects, **override_fields):
         init_vars = dict()
-        search_maps = (AttrDict(override_fields), ) + objects
-        for key, field in items(cls.__fields__):
-            value = find_or_none(key, search_maps)
-            if value is not None or field.required:
-                init_vars[key] = field.type(value) if field.is_enum else value
+        search_maps = tuple(AttrDict(o) if isinstance(o, dict) else o
+                            for o in ((override_fields,) + objects))
+        for key in cls.__fields__:
+            init_vars[key] = find_or_none(key, search_maps)
         return cls(**init_vars)
+
+    create_from_objects = from_objects  # for backward compatibility; deprecated
 
     @classmethod
     def from_json(cls, json_str):

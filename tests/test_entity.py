@@ -82,7 +82,7 @@ class EntityTests(unittest.TestCase):
         se = SampleEntity(string_field='bazaar', integer_field=28, enum_field=ChooseOne.A)
         blank = Blank()
         blank.integer_field = 14
-        se2 = SampleEntity.create_from_objects(blank, se, string_field='baboon')
+        se2 = SampleEntity.from_objects(blank, se, string_field='baboon')
         self.assertEqual('baboon', se2.string_field)
         self.assertEqual(14, se2.integer_field)
 
