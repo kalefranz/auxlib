@@ -1,91 +1,7 @@
 # -*- coding: utf-8 -*-
-"""This module provides facilities for serializable, validatable, and type-enforcing
-domain objects.
+"""
 
-This module has many of the same motivations as the python Marshmallow package.
-<http://marshmallow.readthedocs.org/en/latest/why.html>
-
-Also need to be explicit in explaining what Marshmallow doesn't do, and why this module is needed.
-  - Provides type safety like an ORM. And like an ORM, all classes subclass Entity.
-  - Provides BUILT IN serialization and deserialization.  Marhmallow requires a lot of code
-    duplication.
-
-This module gives us:
-  - type safety
-  - custom field validation
-  - serialization and deserialization
-  - rock solid foundational domain objects
-
-
-Comparison to schematics:
-  - no get_mock_object method (yet)
-  - no context-dependent serialization or MultilingualStringType
-  - name = StringType(serialized_name='person_name')
-  - name = StringType(serialize_when_none=False)
-  - more flexible validation error messages
-
-
-TODO:
-  - alternate field names
-  - add dump_if_null field option
-  - consider adding immutability, maybe ImmutableEntity
-  - consider making individual fields immutable
-
-
-Optional Field Properties:
-  - validation = None
-  - default = None
-  - required = True
-  - in_dump = True
-  - nullable = False
-
-Behaviors:
-  - Nullable is a "hard" setting, in that the value is either always or never allowed to be None.
-  - What happens then if required=False and nullable=False?
-      - The object can be init'd without a value (though not with a None value).
-        getattr throws AttributeError
-      - Any assignment must be not None.
-
-
-  - Setting a value to None doesn't "unset" a value.  (That's what del is for.)  And you can't
-    del a value if required=True, nullable=False, default=None.  That should raise
-    OperationNotAllowedError.
-
-  - If a field is not required, del does *not* "unmask" the default value.  Instead, del
-    removes the value from the object entirely.  To get back the default value, need to recreate
-    the object.  Entity.from_objects(old_object)
-
-
-  - Disabling in_dump is a "hard" setting, in that with it disabled the field will never get
-    dumped.  With it enabled, the field may or may not be dumped depending on its value and other
-    settings.
-
-  - Required is a "hard" setting, in that if True, a valid value or default must be provided. None
-    is only a valid value or default if nullable is True.
-
-  - In general, nullable means that None is a valid value.
-    - getattr returns None instead of raising Attribute error
-    - If in_dump, field is given with null value.
-    - If default is not None, assigning None clears a previous assignment. Future getattrs return
-      the default value.
-    - What does nullable mean with default=None and required=True? Does instantiation raise
-      an error if assignment not made on init? Can IntField(nullable=True) be init'd?
-
-  - If required=False and nullable=False, field will only be in dump if field!=None.
-    Also, getattr raises AttributeError.
-  - If required=False and nullable=True, field will be in dump if field==None.
-
-  - If in_dump is True, does default value get dumped:
-    - if no assignment, default exists
-    - if nullable, and assigned None
-  - How does optional validation work with nullable and assigning None?
-  - When does gettattr throw AttributeError, and when does it return None?
-
-
-
-
-
-Examples:
+Tutorial:
     # ## Chapter 1: Entity and Field Basics ##
     >>> class Color(Enum):
     ...     blue = 0
@@ -194,7 +110,7 @@ Examples:
     >>> sum(c.weight for c in company_fleet.cars)
     12727.26
 
-    # ## Chapter 3: The del and null weeds ##
+    # ## Chapter X: The del and null Weeds ##
     >>> old_date = lambda: dateparse('1982-02-17')
     >>> class CarBattery(Entity):
     ...     # NOTE: default value can be a callable!
@@ -239,7 +155,7 @@ Examples:
     >>> battery.json()
     '{"latest_charge": null}'
 
-    # ## onward ##
+    # ## Chapter 3: Immutability ##
     >>> class ImmutableCar(ImmutableEntity):
     ...     wheels = IntField(default=4, validation=lambda x: 3 <= x <= 4)
     ...     color = EnumField(Color)
@@ -250,6 +166,27 @@ Examples:
     >>> icar.wheels = 4
     Traceback (most recent call last):
     AttributeError: Assignment not allowed. ImmutableCar is immutable.
+
+    >>> del icar.wheels
+    Traceback (most recent call last):
+    AttributeError: Deletion not allowed. ImmutableCar is immutable.
+
+    >>> class FixedWheelCar(Entity):
+    ...     wheels = IntField(default=4, immutable=True)
+    ...     color = EnumField(Color)
+    >>> fwcar = FixedWheelCar(wheels=3, color='blue')
+    >>> fwcar.json()
+    '{"wheels": 3, "color": 0}'
+
+    >>> # repainting the car is easy
+    >>> fwcar.color = Color.red
+    >>> fwcar.color.name
+    'red'
+
+    >>> # can't really change the number of wheels though
+    >>> fwcar.wheels = 18
+    Traceback (most recent call last):
+    AttributeError: The wheels field is immutable.
 
 
 """
@@ -273,7 +210,7 @@ from .type_coercion import maybecall
 log = getLogger(__name__)
 
 __all__ = [
-    "Field", "BooleanField", "BoolField", "IntegerField", "IntField",
+    "BooleanField", "BoolField", "IntegerField", "IntField",
     "NumberField", "StringField", "DateField",
     "EnumField", "ListField", "MapField", "ComposableField",
     "Entity", "ImmutableEntity",
@@ -282,10 +219,96 @@ __all__ = [
 KEY_OVERRIDES_MAP = "__key_overrides__"
 
 
+NOTES = """
+This module provides facilities for serializable, validatable, and type-enforcing
+domain objects.
+
+This module has many of the same motivations as the python Marshmallow package.
+<http://marshmallow.readthedocs.org/en/latest/why.html>
+
+Also need to be explicit in explaining what Marshmallow doesn't do, and why this module is needed.
+  - Provides type safety like an ORM. And like an ORM, all classes subclass Entity.
+  - Provides BUILT IN serialization and deserialization.  Marhmallow requires a lot of code
+    duplication.
+
+This module gives us:
+  - type safety
+  - custom field validation
+  - serialization and deserialization
+  - rock solid foundational domain objects
+
+
+Deficiencies to schematics:
+  - no get_mock_object method (yet)
+  - no context-dependent serialization or MultilingualStringType (yet)
+  - name = StringType(serialized_name='person_name')
+  - name = StringType(serialize_when_none=False)
+  - more flexible validation error messages
+
+
+TODO:
+  - alternate field names
+  - add dump_if_null field option
+
+
+Optional Field Properties:
+  - validation = None
+  - default = None
+  - required = True
+  - in_dump = True
+  - nullable = False
+
+Behaviors:
+  - Nullable is a "hard" setting, in that the value is either always or never allowed to be None.
+  - What happens then if required=False and nullable=False?
+      - The object can be init'd without a value (though not with a None value).
+        getattr throws AttributeError
+      - Any assignment must be not None.
+
+
+  - Setting a value to None doesn't "unset" a value.  (That's what del is for.)  And you can't
+    del a value if required=True, nullable=False, default=None.  That should raise
+    OperationNotAllowedError.
+
+  - If a field is not required, del does *not* "unmask" the default value.  Instead, del
+    removes the value from the object entirely.  To get back the default value, need to recreate
+    the object.  Entity.from_objects(old_object)
+
+
+  - Disabling in_dump is a "hard" setting, in that with it disabled the field will never get
+    dumped.  With it enabled, the field may or may not be dumped depending on its value and other
+    settings.
+
+  - Required is a "hard" setting, in that if True, a valid value or default must be provided. None
+    is only a valid value or default if nullable is True.
+
+  - In general, nullable means that None is a valid value.
+    - getattr returns None instead of raising Attribute error
+    - If in_dump, field is given with null value.
+    - If default is not None, assigning None clears a previous assignment. Future getattrs return
+      the default value.
+    - What does nullable mean with default=None and required=True? Does instantiation raise
+      an error if assignment not made on init? Can IntField(nullable=True) be init'd?
+
+  - If required=False and nullable=False, field will only be in dump if field!=None.
+    Also, getattr raises AttributeError.
+  - If required=False and nullable=True, field will be in dump if field==None.
+
+  - If in_dump is True, does default value get dumped:
+    - if no assignment, default exists
+    - if nullable, and assigned None
+  - How does optional validation work with nullable and assigning None?
+  - When does gettattr throw AttributeError, and when does it return None?
+
+
+
+"""
+
+
 class Field(object):
     """
     Fields are doing something very similar to boxing and unboxing
-    of c#/java primitives.  __set__ should take a "primitve" or "raw" value and create a "boxed"
+    of c#/java primitives.  __set__ should take a "primitive" or "raw" value and create a "boxed"
     or "programatically useable" value of it.  While __get__ should return the boxed value,
     dump in turn should unbox the value into a primitive or raw value.
 
@@ -302,12 +325,14 @@ class Field(object):
     #   on __prepare__.  Strategy lifted from http://stackoverflow.com/a/4460034/2127762
     _order_helper = 0
 
-    def __init__(self, default=None, required=True, validation=None, in_dump=True, nullable=False):
+    def __init__(self, default=None, required=True, validation=None, in_dump=True,
+                 nullable=False, immutable=False):
         self._default = default if callable(default) else self.box(default)
         self._required = required
         self._validation = validation
         self._in_dump = in_dump
         self._nullable = nullable
+        self._immutable = immutable
         if default is not None:
             self.validate(self.box(maybecall(default)))
 
@@ -344,17 +369,21 @@ class Field(object):
             else:
                 raise AttributeError("A value for {0} has not been set".format(self.name))
         if val is None and not self.nullable:
-            # means the "tricky edge case" was activted in __delete__
+            # means the "tricky edge case" was activated in __delete__
             raise AttributeError("The {0} field has been deleted.".format(self.name))
         return self.unbox(val)
 
     def __set__(self, instance, val):
+        if self.immutable and instance._initd:
+            raise AttributeError("The {0} field is immutable.".format(self.name))
         # validate will raise an exception if invalid
         # validate will return False if the value should be removed
         instance.__dict__[self.name] = self.validate(self.box(val))
 
     def __delete__(self, instance):
-        if self.required:
+        if self.immutable and instance._initd:
+            raise AttributeError("The {0} field is immutable.".format(self.name))
+        elif self.required:
             raise AttributeError("The {0} field is required and cannot be deleted."
                                  .format(self.name))
         elif not self.nullable:
@@ -389,7 +418,8 @@ class Field(object):
                 return val
         elif val is None and self.nullable:
             return val
-        raise ValidationError(getattr(self, 'name', 'undefined name'), val)
+        else:
+            raise ValidationError(getattr(self, 'name', 'undefined name'), val)
 
     @property
     def required(self):
@@ -422,6 +452,10 @@ class Field(object):
     @property
     def is_nullable(self):
         return self._nullable
+
+    @property
+    def immutable(self):
+        return self._immutable
 
 
 class BooleanField(Field):
@@ -600,6 +634,11 @@ class EntityType(type):
         if hasattr(cls, '__register__'):
             cls.__register__()
 
+    def __call__(cls, *args, **kwargs):
+        instance = super(EntityType, cls).__call__(*args, **kwargs)
+        setattr(instance, '_{0}__initd'.format(cls.__name__), True)
+        return instance
+
     @property
     def fields(cls):
         return cls.__fields__.keys()
@@ -625,7 +664,6 @@ class Entity(object):
                 if kwargs[key] is not None or field.required:
                     raise
         self.validate()
-        self._initd = True
 
     @classmethod
     def create_from_objects(cls, *objects, **override_fields):
@@ -716,17 +754,21 @@ class Entity(object):
     def __hash__(self):
         return sum(hash(getattr(self, field, None)) for field in self.__fields__)
 
+    @property
+    def _initd(self):
+        return getattr(self, '_{0}__initd'.format(self.__class__.__name__), None)
+
 
 class ImmutableEntity(Entity):
 
     def __setattr__(self, attribute, value):
-        if getattr(self, '_initd', None):
+        if self._initd:
             raise AttributeError("Assignment not allowed. {0} is immutable."
                                  .format(self.__class__.__name__))
         super(ImmutableEntity, self).__setattr__(attribute, value)
 
     def __delattr__(self, item):
-        if getattr(self, '_initd', None):
-            raise AttributeError("Delete not allowed. {0} is immutable."
+        if self._initd:
+            raise AttributeError("Deletion not allowed. {0} is immutable."
                                  .format(self.__class__.__name__))
         super(ImmutableEntity, self).__delattr__(item)
