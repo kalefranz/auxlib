@@ -65,6 +65,7 @@ Tutorial:
     >>> cloned_car == car
     True
 
+
     # ## Chapter 2: Entity and Field Composition ##
     >>> # now let's get fancy
     >>> class Fleet(Entity):
@@ -110,6 +111,41 @@ Tutorial:
     >>> sum(c.weight for c in company_fleet.cars)
     12727.26
 
+
+    # ## Chapter 3: Immutability ##
+    >>> class ImmutableCar(ImmutableEntity):
+    ...     wheels = IntField(default=4, validation=lambda x: 3 <= x <= 4)
+    ...     color = EnumField(Color)
+    >>> icar = ImmutableCar.from_objects({'wheels': 3, 'color': 'blue'})
+    >>> icar
+    ImmutableCar(wheels=3, color=0)
+
+    >>> icar.wheels = 4
+    Traceback (most recent call last):
+    AttributeError: Assignment not allowed. ImmutableCar is immutable.
+
+    >>> del icar.wheels
+    Traceback (most recent call last):
+    AttributeError: Deletion not allowed. ImmutableCar is immutable.
+
+    >>> class FixedWheelCar(Entity):
+    ...     wheels = IntField(default=4, immutable=True)
+    ...     color = EnumField(Color)
+    >>> fwcar = FixedWheelCar.from_objects(icar)
+    >>> fwcar.json()
+    '{"wheels": 3, "color": 0}'
+
+    >>> # repainting the car is easy
+    >>> fwcar.color = Color.red
+    >>> fwcar.color.name
+    'red'
+
+    >>> # can't really change the number of wheels though
+    >>> fwcar.wheels = 18
+    Traceback (most recent call last):
+    AttributeError: The wheels field is immutable.
+
+
     # ## Chapter X: The del and null Weeds ##
     >>> old_date = lambda: dateparse('1982-02-17')
     >>> class CarBattery(Entity):
@@ -154,39 +190,6 @@ Tutorial:
     >>> del battery.expiration
     >>> battery.json()
     '{"latest_charge": null}'
-
-    # ## Chapter 3: Immutability ##
-    >>> class ImmutableCar(ImmutableEntity):
-    ...     wheels = IntField(default=4, validation=lambda x: 3 <= x <= 4)
-    ...     color = EnumField(Color)
-    >>> icar = ImmutableCar.from_objects({'wheels': 3, 'color': 'blue'})
-    >>> icar
-    ImmutableCar(wheels=3, color=0)
-
-    >>> icar.wheels = 4
-    Traceback (most recent call last):
-    AttributeError: Assignment not allowed. ImmutableCar is immutable.
-
-    >>> del icar.wheels
-    Traceback (most recent call last):
-    AttributeError: Deletion not allowed. ImmutableCar is immutable.
-
-    >>> class FixedWheelCar(Entity):
-    ...     wheels = IntField(default=4, immutable=True)
-    ...     color = EnumField(Color)
-    >>> fwcar = FixedWheelCar.from_objects(icar)
-    >>> fwcar.json()
-    '{"wheels": 3, "color": 0}'
-
-    >>> # repainting the car is easy
-    >>> fwcar.color = Color.red
-    >>> fwcar.color.name
-    'red'
-
-    >>> # can't really change the number of wheels though
-    >>> fwcar.wheels = 18
-    Traceback (most recent call last):
-    AttributeError: The wheels field is immutable.
 
 
 """
@@ -428,10 +431,6 @@ class Field(object):
     @property
     def is_required(self):
         return self._required
-
-    @property
-    def is_enum(self):
-        return isinstance(self._type, type) and issubclass(self._type, Enum)
 
     @property
     def type(self):
