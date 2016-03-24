@@ -29,6 +29,7 @@ TODO:
   - alternate field names
   - add dump_if_null field option
   - consider adding immutability, maybe ImmutableEntity
+  - consider making individual fields immutable
 
 
 Optional Field Properties:
@@ -74,12 +75,9 @@ Behaviors:
     Also, getattr raises AttributeError.
   - If required=False and nullable=True, field will be in dump if field==None.
 
-  - What does required and default mean?
-  - What does required and default and nullable mean?
   - If in_dump is True, does default value get dumped:
     - if no assignment, default exists
     - if nullable, and assigned None
-  - Can assign None?
   - How does optional validation work with nullable and assigning None?
   - When does gettattr throw AttributeError, and when does it return None?
 
@@ -241,27 +239,45 @@ Examples:
     >>> battery.json()
     '{"latest_charge": null}'
 
+    # ## onward ##
+    >>> class ImmutableCar(ImmutableEntity):
+    ...     wheels = IntField(default=4, validation=lambda x: 3 <= x <= 4)
+    ...     color = EnumField(Color)
+    >>> icar = ImmutableCar(wheels=3, color='blue')
+    >>> icar
+    ImmutableCar(wheels=3, color=0)
+
+    >>> icar.wheels = 4
+    Traceback (most recent call last):
+    AttributeError: Assignment not allowed. ImmutableCar is immutable.
+
 
 """
 from __future__ import absolute_import, division, print_function
 
-from collections import OrderedDict as odict
+from collections import Iterable, OrderedDict as odict
 from datetime import datetime
+from enum import Enum
 from functools import reduce
 from json import loads as json_loads, dumps as json_dumps
 from logging import getLogger
-import collections
-
-from enum import Enum
 
 from ._vendor.dateutil.parser import parse as dateparse
 from ._vendor.five import with_metaclass, items, values
 from ._vendor.six import integer_types, string_types
 from .collection import AttrDict
 from .exceptions import ValidationError, Raise
+from .ish import find_or_none
 from .type_coercion import maybecall
 
 log = getLogger(__name__)
+
+__all__ = [
+    "Field", "BooleanField", "BoolField", "IntegerField", "IntField",
+    "NumberField", "StringField", "DateField",
+    "EnumField", "ListField", "MapField", "ComposableField",
+    "Entity", "ImmutableEntity",
+]
 
 KEY_OVERRIDES_MAP = "__key_overrides__"
 
@@ -408,23 +424,27 @@ class Field(object):
         return self._nullable
 
 
-class IntField(Field):
+class BooleanField(Field):
+    _type = bool
+
+    def box(self, val):
+        return None if val is None else bool(val)
+
+BoolField = BooleanField
+
+
+class IntegerField(Field):
     _type = integer_types
 
-
-class StringField(Field):
-    _type = string_types
+IntField = IntegerField
 
 
 class NumberField(Field):
     _type = integer_types + (float, complex)
 
 
-class BooleanField(Field):
-    _type = bool
-
-    def box(self, val):
-        return None if val is None else bool(val)
+class StringField(Field):
+    _type = string_types
 
 
 class DateField(Field):
@@ -481,7 +501,7 @@ class ListField(Field):
         elif isinstance(val, string_types):
             raise ValidationError("Attempted to assign a string to ListField {0}"
                                   "".format(self.name))
-        elif isinstance(val, collections.Iterable):
+        elif isinstance(val, Iterable):
             et = self._element_type
             if isinstance(et, type) and issubclass(et, Entity):
                 return tuple(v if isinstance(v, et) else et(**v) for v in val)
@@ -605,6 +625,7 @@ class Entity(object):
                 if kwargs[key] is not None or field.required:
                     raise
         self.validate()
+        self._initd = True
 
     @classmethod
     def create_from_objects(cls, *objects, **override_fields):
@@ -640,7 +661,9 @@ class Entity(object):
                 raise  # pragma: no cover
 
     def __repr__(self):
-        def _exists(key):
+        def _valid(key):
+            if key.startswith('_'):
+                return False
             try:
                 getattr(self, key)
                 return True
@@ -657,7 +680,7 @@ class Entity(object):
 
         kwarg_str = ", ".join("{0}={1}".format(key, _val(key))
                               for key in sorted(self.__dict__, key=_sort_helper)
-                              if _exists(key))
+                              if _valid(key))
         return "{0}({1})".format(self.__class__.__name__, kwarg_str)
 
     @classmethod
@@ -694,31 +717,16 @@ class Entity(object):
         return sum(hash(getattr(self, field, None)) for field in self.__fields__)
 
 
-def find_or_none(key, search_maps, map_index=0):
-    """Return the value of the first key found in the list of search_maps,
-    otherwise return None.
+class ImmutableEntity(Entity):
 
-    Examples:
-        >>> d1 = AttrDict({'a': 1, 'b': 2, 'c': 3, 'e': None})
-        >>> d2 = AttrDict({'b': 5, 'e': 6, 'f': 7})
-        >>> find_or_none('c', (d1, d2))
-        3
-        >>> find_or_none('f', (d1, d2))
-        7
-        >>> find_or_none('b', (d1, d2))
-        2
-        >>> print(find_or_none('g', (d1, d2)))
-        None
-        >>> find_or_none('e', (d1, d2))
-        6
+    def __setattr__(self, attribute, value):
+        if getattr(self, '_initd', None):
+            raise AttributeError("Assignment not allowed. {0} is immutable."
+                                 .format(self.__class__.__name__))
+        super(ImmutableEntity, self).__setattr__(attribute, value)
 
-    """
-    try:
-        attr = getattr(search_maps[map_index], key)
-        return attr if attr is not None else find_or_none(key, search_maps[1:])
-    except AttributeError:
-        # not found in first map object, so go to next
-        return find_or_none(key, search_maps, map_index+1)
-    except IndexError:
-        # ran out of map objects to search
-        return None
+    def __delattr__(self, item):
+        if getattr(self, '_initd', None):
+            raise AttributeError("Delete not allowed. {0} is immutable."
+                                 .format(self.__class__.__name__))
+        super(ImmutableEntity, self).__delattr__(item)
