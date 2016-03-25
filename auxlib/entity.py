@@ -255,10 +255,10 @@ from .type_coercion import maybecall
 log = getLogger(__name__)
 
 __all__ = [
+    "Entity", "ImmutableEntity", "Field",
     "BooleanField", "BoolField", "IntegerField", "IntField",
     "NumberField", "StringField", "DateField",
     "EnumField", "ListField", "MapField", "ComposableField",
-    "Entity", "ImmutableEntity",
 ]
 
 KEY_OVERRIDES_MAP = "__key_overrides__"

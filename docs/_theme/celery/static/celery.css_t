@@ -11,6 +11,7 @@
 {% set body_font_stack = 'Optima, Segoe, "Segoe UI", Candara, Calibri, Arial, sans-serif' %}
 {% set headline_font_stack = 'Futura, "Trebuchet MS", Arial, sans-serif' %}
 {% set code_font_stack = "'Consolas', 'Menlo', 'Deja Vu Sans Mono', 'Bitstream Vera Sans Mono', monospace" %}
+{% set header_background_color = '#F2EEFC' %}
 
 @import url("basic.css");
 
@@ -41,7 +42,7 @@ p.developmentversion {
 div.related {
     width: {{ page_width - 20 }}px;
     padding: 5px 10px;
-    background: #F2FCEE;
+    background: {{ header_background_color }};
     margin: 15px auto 15px auto;
 }
 
