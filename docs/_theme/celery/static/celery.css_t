@@ -231,6 +231,7 @@ div.admonition p.last {
 
 div.highlight {
     background-color: white;
+    font-size: 0.9em;
 }
 
 dt:target, .highlight {
@@ -399,11 +400,3 @@ a.footnote-reference:hover {
 a:hover tt {
     background: #EEE;
 }
-
-
-
-
-.highlight-python .highlight {
-    font-size: 0.9em;
-}
-
