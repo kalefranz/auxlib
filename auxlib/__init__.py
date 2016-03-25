@@ -6,25 +6,25 @@ python stdlib gaps much like `pytoolz <https://github.com/pytoolz/>`_ has for fu
 programming, `pyrsistent <https://github.com/tobgu/pyrsistent/>`_ has for data structures, or
 `boltons <https://github.com/mahmoud/boltons/>`_ has generally.
 
-Major areas addressed are:
-  - package versioning, with a clean and less invasive alternative to
-    versioneer (:ref:`packaging`)
-  - a map implementation designed specifically to hold application configuration and context
-    information (:ref:`configuration`)
-  - intelligent type coercion utilities (:ref:`type_coercion`)
-  - factory pattern (:ref:`factory`)
-  - robust base class for type-enforced data models and transfer objects (:ref:`entity`)
-  - file path utilities especially helpful when working with various python package
-    formats (:ref:`path`)
-  - logging initialization routines to simplify python logging setup (:ref:`logz`)
-  - simple, but correct, pycrypto wrapper (:ref:`crypt`)
+Major areas addressed include:
+  - :ref:`packaging`: package versioning, with a clean and less invasive alternative to
+    versioneer
+  - :ref:`entity`: robust base class for type-enforced data models and transfer objects
+  - :ref:`type_coercion`: intelligent type coercion utilities
+  - :ref:`configuration`: a map implementation designed specifically to hold application
+    configuration and context information
+  - :ref:`factory`: factory pattern implementation
+  - :ref:`path`: file path utilities especially helpful when working with various python
+    package formats
+  - :ref:`logz`: logging initialization routines to simplify python logging setup
+  - :ref:`crypt`: simple, but correct, pycrypto wrapper
 
 
 """
 from __future__ import absolute_import, division, print_function
 from logging import getLogger, NullHandler
 
-# don't mess up logging for users
+# don't mess up logging for library users
 getLogger('auxlib').addHandler(NullHandler())
 
 from .packaging import BuildPyCommand, SDistCommand, Tox, get_version  # NOQA
