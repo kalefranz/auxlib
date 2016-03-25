@@ -1,5 +1,5 @@
-auxlib.ish module
------------------
+auxlib.ish
+----------
 
 .. automodule:: auxlib.ish
     :members:

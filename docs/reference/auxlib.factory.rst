@@ -1,5 +1,5 @@
-auxlib.factory module
----------------------
+auxlib.factory
+--------------
 
 .. automodule:: auxlib.factory
     :members:

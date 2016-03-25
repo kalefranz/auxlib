@@ -1,5 +1,7 @@
-auxlib.type_coercion module
----------------------------
+.. _type_coercion:
+
+auxlib.type_coercion
+--------------------
 
 .. automodule:: auxlib.type_coercion
     :members:

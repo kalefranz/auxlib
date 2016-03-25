@@ -1,5 +1,5 @@
-auxlib.path module
-------------------
+auxlib.path
+-----------
 
 .. automodule:: auxlib.path
     :members:

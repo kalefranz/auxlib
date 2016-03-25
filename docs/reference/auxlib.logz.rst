@@ -1,5 +1,5 @@
-auxlib.logz module
-------------------
+auxlib.logz
+-----------
 
 .. automodule:: auxlib.logz
     :members:

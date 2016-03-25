@@ -1,5 +1,5 @@
-auxlib.packaging module
------------------------
+auxlib.packaging
+----------------
 
 .. automodule:: auxlib.packaging
     :members:
