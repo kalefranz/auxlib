@@ -1,5 +1,7 @@
-auxlib.entity module
---------------------
+.. _entity:
+
+auxlib.entity
+-------------
 
 .. automodule:: auxlib.entity
     :members:

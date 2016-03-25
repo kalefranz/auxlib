@@ -1,5 +1,7 @@
-auxlib.deprecation module
--------------------------
+.. _deprecation:
+
+auxlib.deprecation
+------------------
 
 .. automodule:: auxlib.deprecation
     :members:

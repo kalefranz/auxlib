@@ -1,3 +1,5 @@
+.. _packaging:
+
 auxlib.packaging
 ----------------
 

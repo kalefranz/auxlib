@@ -8,16 +8,16 @@ programming, `pyrsistent <https://github.com/tobgu/pyrsistent/>`_ has for data s
 
 Major areas addressed are:
   - package versioning, with a clean and less invasive alternative to
-    versioneer (auxlib.packaging)
+    versioneer (:ref:`packaging`)
   - a map implementation designed specifically to hold application configuration and context
-    information (auxlib.configuration)
+    information (:ref:`configuration`)
   - intelligent type coercion utilities (:ref:`type_coercion`)
-  - factory pattern (auxlib.factory)
-  - robust base class for type-enforced data models and transfer objects (auxlib.entity)
+  - factory pattern (:ref:`factory`)
+  - robust base class for type-enforced data models and transfer objects (:ref:`entity`)
   - file path utilities especially helpful when working with various python package
-    formats (auxlib.path)
-  - logging initialization routines to simplify python logging setup (auxlib.logz)
-  - simple, but correct, pycrypto wrapper (auxlib.crypt)
+    formats (:ref:`path`)
+  - logging initialization routines to simplify python logging setup (:ref:`logz`)
+  - simple, but correct, pycrypto wrapper (:ref:`crypt`)
 
 
 """

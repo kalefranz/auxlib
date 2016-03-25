@@ -1,5 +1,7 @@
-auxlib.configuration module
----------------------------
+.. _configuration:
+
+auxlib.configuration
+--------------------
 
 .. automodule:: auxlib.configuration
     :members:

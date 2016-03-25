@@ -1,5 +1,7 @@
-auxlib.exceptions module
-------------------------
+.. _exceptions:
+
+auxlib.exceptions
+-----------------
 
 .. automodule:: auxlib.exceptions
     :members:

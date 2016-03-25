@@ -1,5 +1,7 @@
-auxlib.crypt module
--------------------
+.. _crypt:
+
+auxlib.crypt
+------------
 
 .. automodule:: auxlib.crypt
     :members:

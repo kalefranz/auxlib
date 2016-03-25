@@ -1,5 +1,7 @@
-auxlib.decorators module
-------------------------
+.. _decorators:
+
+auxlib.decorators
+-----------------
 
 .. automodule:: auxlib.decorators
     :members:

@@ -1,5 +1,7 @@
-auxlib.collection module
-------------------------
+.. _collection:
+
+auxlib.collection
+-----------------
 
 .. automodule:: auxlib.collection
     :members:
