@@ -1,8 +1,12 @@
 # -*- coding: utf-8 -*-
 """
+========
+Tutorial
+========
 
-Tutorial:
-    # ## Chapter 1: Entity and Field Basics ##
+Chapter 1: Entity and Field Basics
+----------------------------------
+
     >>> class Color(Enum):
     ...     blue = 0
     ...     black = 1
@@ -22,13 +26,15 @@ Tutorial:
     4
 
     >>> # but a car can't have 5 wheels!
-    >>> #  the `validation=` field is a simple callable that returns a boolean based on validity
+    >>> #  the `validation=` field is a simple callable that returns a
+    >>> #  boolean based on validity
     >>> car.wheels = 5
     Traceback (most recent call last):
     ValidationError: Invalid value 5 for wheels
 
-    >>> # we can call .dump() on car, and just get back a standard python dict
-    >>> #   actually, it's an ordereddict to match attribute declaration order
+    >>> # we can call .dump() on car, and just get back a standard
+    >>> #  python dict actually, it's an ordereddict to match attribute
+    >>> #  declaration order
     >>> type(car.dump())
     <class 'collections.OrderedDict'>
     >>> car.dump()
@@ -52,8 +58,10 @@ Tutorial:
     >>> type(car.color)
     <enum 'Color'>
 
-    >>> # enum assignment can be with any of (and preferentially) (1) an enum literal,
-    >>> #   (2) a valid enum value, or (3) a valid enum name
+    >>> # enum assignment can be with any of (and preferentially)
+    >>> #   (1) an enum literal,
+    >>> #   (2) a valid enum value, or
+    >>> #   (3) a valid enum name
     >>> car.color = Color.blue; car.color.value
     0
     >>> car.color = 1; car.color.name
@@ -73,11 +81,12 @@ Tutorial:
     >>> cloned_car == car
     True
 
-    >>> # while we're at it, these are all equivalent
-    >>> Car(**car.dump()) == \
-            Car.from_objects(car) == \
-            Car.from_objects({"weight": 4242.42, "wheels": 4, "color": 1}) == \
-            Car.from_json('{"weight": 4242.42, "color": 1}')
+    >>> # while we're at it, these are all equivalent too
+    >>> car == Car.from_objects(car)
+    True
+    >>> car == Car.from_objects({"weight": 4242.42, "wheels": 4, "color": 1})
+    True
+    >>> car == Car.from_json('{"weight": 4242.42, "color": 1}')
     True
 
     >>> # .from_objects() even lets you stack and combine objects
@@ -86,16 +95,20 @@ Tutorial:
     ...     wheels = 3
     >>> Car.from_objects(DumbClass(), dict(weight=2222, color=1))
     Car(weight=2222, wheels=3, color=0)
-    >>> # and also pass kwargs that override properties pulled off any objects
+    >>> # and also pass kwargs that override properties pulled
+    >>> #  off any objects
     >>> Car.from_objects(DumbClass(), {'weight': 2222, 'color': 1}, color=2, weight=33)
     Car(weight=33, wheels=3, color=2)
 
 
-    # ## Chapter 2: Entity and Field Composition ##
+Chapter 2: Entity and Field Composition
+---------------------------------------
+
     >>> # now let's get fancy
     >>> # a ComposableField "nests" another valid Entity
-    >>> # a ListField's first argument is a "generic" type, which can be a valid Entity,
-    >>> #   any python primitive type, or a list of Entities/types
+    >>> # a ListField's first argument is a "generic" type,
+    >>> #   which can be a valid Entity, any python primitive
+    >>> #   type, or a list of Entities/types
     >>> class Fleet(Entity):
     ...     boss_car = ComposableField(Car)
     ...     cars = ListField(Car)
@@ -140,7 +153,9 @@ Tutorial:
     12727.26
 
 
-    # ## Chapter 3: Immutability ##
+Chapter 3: Immutability
+-----------------------
+
     >>> class ImmutableCar(ImmutableEntity):
     ...     wheels = IntField(default=4, validation=lambda x: 3 <= x <= 4)
     ...     color = EnumField(Color)
@@ -170,7 +185,9 @@ Tutorial:
     AttributeError: The wheels field is immutable.
 
 
-    # ## Chapter X: The del and null Weeds ##
+Chapter X: The del and null Weeds
+---------------------------------
+
     >>> old_date = lambda: dateparse('1982-02-17')
     >>> class CarBattery(Entity):
     ...     # NOTE: default value can be a callable!
@@ -178,15 +195,15 @@ Tutorial:
     ...     latest_charge = DateField(default=old_date, nullable=True)  # required=True
     ...     expiration = DateField(default=old_date, required=False, nullable=False)
 
-    # starting point
+    >>> # starting point
     >>> battery = CarBattery()
     >>> battery
     CarBattery()
     >>> battery.json()
     '{"latest_charge": "1982-02-17T00:00:00", "expiration": "1982-02-17T00:00:00"}'
 
-    # first_charge is not assigned a default value. Once one is assigned, it can be deleted,
-    #   but it can't be made null.
+    >>> # first_charge is not assigned a default value. Once one is assigned, it can be deleted,
+    >>> #   but it can't be made null.
     >>> battery.first_charge = dateparse('2016-03-23')
     >>> battery
     CarBattery(first_charge=datetime.datetime(2016, 3, 23, 0, 0))
@@ -197,7 +214,7 @@ Tutorial:
     >>> battery
     CarBattery()
 
-    # latest_charge can be null, but it can't be deleted. The default value is a callable.
+    >>> # latest_charge can be null, but it can't be deleted. The default value is a callable.
     >>> del battery.latest_charge
     Traceback (most recent call last):
     AttributeError: The latest_charge field is required and cannot be deleted.
@@ -205,7 +222,7 @@ Tutorial:
     >>> battery.json()
     '{"latest_charge": null, "expiration": "1982-02-17T00:00:00"}'
 
-    # expiration is assigned by default, can't be made null, but can be deleted.
+    >>> # expiration is assigned by default, can't be made null, but can be deleted.
     >>> battery.expiration
     datetime.datetime(1982, 2, 17, 0, 0)
     >>> battery.expiration = None
