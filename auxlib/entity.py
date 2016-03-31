@@ -296,6 +296,7 @@ Current deficiencies to schematics:
 TODO:
   - alternate field names
   - add dump_if_null field option
+  - add help/description parameter to Field
 
 
 Optional Field Properties:
@@ -373,14 +374,14 @@ class Field(object):
 
     def __init__(self, default=None, required=True, validation=None, in_dump=True,
                  nullable=False, immutable=False):
-        self._default = default if callable(default) else self.box(default)
+        self._default = default if callable(default) else self.box(None, default)
         self._required = required
         self._validation = validation
         self._in_dump = in_dump
         self._nullable = nullable
         self._immutable = immutable
         if default is not None:
-            self.validate(self.box(maybecall(default)))
+            self.validate(self.box(None, maybecall(default)))
 
         self._order_helper = Field._order_helper
         Field._order_helper += 1
@@ -417,14 +418,14 @@ class Field(object):
         if val is None and not self.nullable:
             # means the "tricky edge case" was activated in __delete__
             raise AttributeError("The {0} field has been deleted.".format(self.name))
-        return self.unbox(val)
+        return self.unbox(instance, instance_type, val)
 
     def __set__(self, instance, val):
         if self.immutable and instance._initd:
             raise AttributeError("The {0} field is immutable.".format(self.name))
         # validate will raise an exception if invalid
         # validate will return False if the value should be removed
-        instance.__dict__[self.name] = self.validate(self.box(val))
+        instance.__dict__[self.name] = self.validate(self.box(instance, val))
 
     def __delete__(self, instance):
         if self.immutable and instance._initd:
@@ -441,10 +442,10 @@ class Field(object):
         else:
             instance.__dict__.pop(self.name, None)
 
-    def box(self, val):
+    def box(self, instance, val):
         return val
 
-    def unbox(self, val):
+    def unbox(self, instance, instance_type, val):
         return val
 
     def dump(self, val):
@@ -499,7 +500,7 @@ class Field(object):
 class BooleanField(Field):
     _type = bool
 
-    def box(self, val):
+    def box(self, instance, val):
         return None if val is None else bool(val)
 
 BoolField = BooleanField
@@ -522,7 +523,7 @@ class StringField(Field):
 class DateField(Field):
     _type = datetime
 
-    def box(self, val):
+    def box(self, instance, val):
         try:
             return dateparse(val) if isinstance(val, string_types) else val
         except ValueError as e:
@@ -541,7 +542,7 @@ class EnumField(Field):
         self._type = enum_class
         super(self.__class__, self).__init__(default, required, validation, in_dump, nullable)
 
-    def box(self, val):
+    def box(self, instance, val):
         if val is None:
             # let the required/nullable logic handle validation for this case
             return None
@@ -567,7 +568,7 @@ class ListField(Field):
         self._element_type = element_type
         super(self.__class__, self).__init__(default, required, validation, in_dump, nullable)
 
-    def box(self, val):
+    def box(self, instance, val):
         if val is None:
             return None
         elif isinstance(val, string_types):
@@ -583,7 +584,7 @@ class ListField(Field):
             raise ValidationError(val, msg="Cannot assign a non-iterable value to "
                                            "{0}".format(self.name))
 
-    def unbox(self, val):
+    def unbox(self, instance, instance_type, val):
         return tuple() if val is None and not self.nullable else val
 
     def dump(self, val):
@@ -618,7 +619,7 @@ class ComposableField(Field):
         self._type = field_class
         super(self.__class__, self).__init__(default, required, validation, in_dump, nullable)
 
-    def box(self, val):
+    def box(self, instance, val):
         if val is None:
             return None
         if isinstance(val, self._type):
@@ -641,10 +642,10 @@ class EntityType(type):
     @staticmethod
     def __get_entity_subclasses(bases):
         try:
-            return [base for base in bases if issubclass(base, Entity) and base is not Entity]
+            return (base for base in bases if issubclass(base, Entity) and base is not Entity)
         except NameError:
             # NameError: global name 'Entity' is not defined
-            return []
+            return ()
 
     def __new__(mcs, name, bases, dct):
         # if we're about to mask a field that's already been created with something that's
