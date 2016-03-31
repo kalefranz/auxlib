@@ -21,11 +21,11 @@ def site_packages_paths():
     if hasattr(sys, 'real_prefix'):
         # in a virtualenv
         log.debug('searching virtualenv')
-        return [p for p in sys.path if p.endswith('site-packages')]
+        return tuple(p for p in sys.path if p.endswith('site-packages'))
     else:
         # not in a virtualenv
         log.debug('searching outside virtualenv')  # pragma: no cover
-        return get_python_lib()  # pragma: no cover
+        return tuple(get_python_lib(), )  # pragma: no cover
 
 
 class PackageFile(object):
