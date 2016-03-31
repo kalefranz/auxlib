@@ -244,8 +244,8 @@ from json import loads as json_loads, dumps as json_dumps
 from logging import getLogger
 
 from ._vendor.dateutil.parser import parse as dateparse
-from ._vendor.five import (with_metaclass, items, values, int_types as integer_types,
-                           string_t as string_types)
+from ._vendor.five import with_metaclass, items, values
+from ._vendor.six import string_types, text_type, integer_types
 from .collection import AttrDict
 from .exceptions import ValidationError, Raise
 from .ish import find_or_none
@@ -372,11 +372,12 @@ class Field(object):
     #   on __prepare__.  Strategy lifted from http://stackoverflow.com/a/4460034/2127762
     _order_helper = 0
 
-    def __init__(self, default=None, required=True, validation=None, in_dump=True,
-                 nullable=False, immutable=False):
+    def __init__(self, default=None, required=True, validation=None, post_validation=None,
+                 in_dump=True, nullable=False, immutable=False):
         self._default = default if callable(default) else self.box(None, default)
         self._required = required
         self._validation = validation
+        self._post_validation = post_validation
         self._in_dump = in_dump
         self._nullable = nullable
         self._immutable = immutable
@@ -418,7 +419,7 @@ class Field(object):
         if val is None and not self.nullable:
             # means the "tricky edge case" was activated in __delete__
             raise AttributeError("The {0} field has been deleted.".format(self.name))
-        return self.unbox(instance, instance_type, val)
+        return self.post_validate(self.unbox(instance, instance_type, val))
 
     def __set__(self, instance, val):
         if self.immutable and instance._initd:
@@ -464,6 +465,20 @@ class Field(object):
         if isinstance(val, self._type) and (self._validation is None or self._validation(val)):
                 return val
         elif val is None and self.nullable:
+            return val
+        else:
+            raise ValidationError(getattr(self, 'name', 'undefined name'), val)
+
+    def post_validate(self, val):
+        """
+
+        Returns:
+            True: if val is valid
+
+        Raises:
+            ValidationError
+        """
+        if self._post_validation is None or self._post_validation(val):
             return val
         else:
             raise ValidationError(getattr(self, 'name', 'undefined name'), val)
@@ -519,6 +534,9 @@ class NumberField(Field):
 class StringField(Field):
     _type = string_types
 
+    def box(self, instance, val):
+        return text_type(val) if isinstance(val, NumberField._type) else val
+
 
 class DateField(Field):
     _type = datetime
@@ -536,11 +554,12 @@ class DateField(Field):
 class EnumField(Field):
 
     def __init__(self, enum_class, default=None, required=True, validation=None,
-                 in_dump=True, nullable=False):
+                 post_validation=None, in_dump=True, nullable=False):
         if not issubclass(enum_class, Enum):
             raise ValidationError(None, msg="enum_class must be an instance of Enum")
         self._type = enum_class
-        super(self.__class__, self).__init__(default, required, validation, in_dump, nullable)
+        super(self.__class__, self).__init__(default, required, validation, post_validation,
+                                             in_dump, nullable)
 
     def box(self, instance, val):
         if val is None:
@@ -564,9 +583,10 @@ class ListField(Field):
     _type = tuple
 
     def __init__(self, element_type, default=None, required=True, validation=None,
-                 in_dump=True, nullable=False):
+                 post_validation=None, in_dump=True, nullable=False):
         self._element_type = element_type
-        super(self.__class__, self).__init__(default, required, validation, in_dump, nullable)
+        super(self.__class__, self).__init__(default, required, validation, post_validation,
+                                             in_dump, nullable)
 
     def box(self, instance, val):
         if val is None:
@@ -577,19 +597,19 @@ class ListField(Field):
         elif isinstance(val, Iterable):
             et = self._element_type
             if isinstance(et, type) and issubclass(et, Entity):
-                return tuple(v if isinstance(v, et) else et(**v) for v in val)
+                return self._type(v if isinstance(v, et) else et(**v) for v in val)
             else:
-                return tuple(val)
+                return self._type(val)
         else:
             raise ValidationError(val, msg="Cannot assign a non-iterable value to "
                                            "{0}".format(self.name))
 
     def unbox(self, instance, instance_type, val):
-        return tuple() if val is None and not self.nullable else val
+        return self._type() if val is None and not self.nullable else val
 
     def dump(self, val):
         if isinstance(self._element_type, type) and issubclass(self._element_type, Entity):
-            return tuple(v.dump() for v in val)
+            return self._type(v.dump() for v in val)
         else:
             return val
 
@@ -601,9 +621,13 @@ class ListField(Field):
         else:
             val = super(self.__class__, self).validate(val)
             et = self._element_type
-            tuple(Raise(ValidationError(self.name, el, et)) for el in val
-                  if not isinstance(el, et))
+            self._type(Raise(ValidationError(self.name, el, et)) for el in val
+                       if not isinstance(el, et))
             return val
+
+
+class MutableListField(ListField):
+    _type = list
 
 
 class MapField(Field):
@@ -615,9 +639,10 @@ class MapField(Field):
 class ComposableField(Field):
 
     def __init__(self, field_class, default=None, required=True, validation=None,
-                 in_dump=True, nullable=False):
+                 post_validation=None, in_dump=True, nullable=False):
         self._type = field_class
-        super(self.__class__, self).__init__(default, required, validation, in_dump, nullable)
+        super(self.__class__, self).__init__(default, required, validation, post_validation,
+                                             in_dump, nullable)
 
     def box(self, instance, val):
         if val is None:
@@ -642,7 +667,7 @@ class EntityType(type):
     @staticmethod
     def __get_entity_subclasses(bases):
         try:
-            return (base for base in bases if issubclass(base, Entity) and base is not Entity)
+            return [base for base in bases if issubclass(base, Entity) and base is not Entity]
         except NameError:
             # NameError: global name 'Entity' is not defined
             return ()
