@@ -40,10 +40,10 @@ programming, `pyrsistent <https://github.com/tobgu/pyrsistent/>`_ has for data s
 `boltons <https://github.com/mahmoud/boltons/>`_ has generally.
 
 Major areas addressed include:
-  - `packaging <http://auxlib.readthedocs.org/en/latest/reference/auxlib.packaging.html>`_:
-     package versioning, with a clean and less invasive alternative to versioneer
-  - `entity <http://auxlib.readthedocs.org/en/latest/reference/auxlib.entity.html>`_:
-     robust base class for type-enforced data models and transfer objects
+  - `packaging <http://auxlib.readthedocs.org/en/latest/reference/auxlib.packaging.html>`_
+       package versioning, with a clean and less invasive alternative to versioneer
+  - `entity <http://auxlib.readthedocs.org/en/latest/reference/auxlib.entity.html>`_ robust base
+  class for type-enforced data models and transfer objects
   - `type_coercion <http://auxlib.readthedocs.org/en/latest/reference/auxlib.type_coercion.html>`_:
      intelligent type coercion utilities
   - `configuration <http://auxlib.readthedocs.org/en/latest/reference/auxlib.configuration.html>`_:
