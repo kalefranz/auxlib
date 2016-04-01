@@ -29,3 +29,25 @@ auxlib
 
 .. image:: https://api.codacy.com/project/badge/grade/5195a5ac49fe49c59a4067b420fa76ad
    :target: https://www.codacy.com/app/kalefranz/auxlib
+
+-------------------------------
+
+Auxlib is an auxiliary library to the python standard library.
+
+The aim is to provide core generic features for app development in python. Auxlib fills in some
+python stdlib gaps much like `pytoolz <https://github.com/pytoolz/>`_ has for functional
+programming, `pyrsistent <https://github.com/tobgu/pyrsistent/>`_ has for data structures, or
+`boltons <https://github.com/mahmoud/boltons/>`_ has generally.
+
+Major areas addressed include:
+  - :ref:`packaging`: package versioning, with a clean and less invasive alternative to
+    versioneer
+  - :ref:`entity`: robust base class for type-enforced data models and transfer objects
+  - :ref:`type_coercion`: intelligent type coercion utilities
+  - :ref:`configuration`: a map implementation designed specifically to hold application
+    configuration and context information
+  - :ref:`factory`: factory pattern implementation
+  - :ref:`path`: file path utilities especially helpful when working with various python
+    package formats
+  - :ref:`logz`: logging initialization routines to simplify python logging setup
+  - :ref:`crypt`: simple, but correct, pycrypto wrapper
