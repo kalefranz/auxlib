@@ -25,6 +25,8 @@ from .exceptions import AuthenticationError
 
 log = logging.getLogger(__name__)
 
+__all__ = ["as_base64", "from_base64", "encrypt", "decrypt", "aes_encrypt", "aes_decrypt"]
+
 AES_KEY_SIZE = 32   # 32 byte key size ==> AES-256
 HMAC_SIG_SIZE = hashlib.sha256().digest_size
 

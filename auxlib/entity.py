@@ -285,11 +285,15 @@ This module gives us:
 Current deficiencies to schematics:
   - no get_mock_object method
   - no context-dependent serialization or MultilingualStringType
-  - name = StringType(serialized_name='person_name')
+  - name = StringType(serialized_name='person_name', alternate_names=['human_name'])
   - name = StringType(serialize_when_none=False)
   - more flexible validation error messages
   - field validation can depend on other fields
   - 'roles' containing blacklists for .dump() and .json()
+    __roles__ = {
+        EntityRole.registered_name: Blacklist('field1', 'field2'),
+        EntityRole.another_registered_name: Whitelist('field3', 'field4'),
+    }
 
 
 TODO:
@@ -737,8 +741,6 @@ class Entity(object):
         for key in cls.__fields__:
             init_vars[key] = find_or_none(key, search_maps)
         return cls(**init_vars)
-
-    create_from_objects = from_objects  # for backward compatibility; deprecated
 
     @classmethod
     def from_json(cls, json_str):
