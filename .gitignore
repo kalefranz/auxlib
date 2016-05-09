@@ -58,6 +58,7 @@ junit*.xml
 
 # Sphinx documentation
 docs/build/
+docs/_theme/bootstrap/static
 
 # PyBuilder
 target/
