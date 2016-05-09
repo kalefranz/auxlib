@@ -8,6 +8,8 @@ from warnings import warn
 __all__ = ["relativedelta", "MO", "TU", "WE", "TH", "FR", "SA", "SU"]
 
 
+from . import __version__
+
 class weekday(object):
     __slots__ = ["weekday", "n"]
 

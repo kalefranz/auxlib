@@ -40,3 +40,17 @@ def find_or_none(key, search_maps, _map_index=0):
     except IndexError:
         # ran out of map objects to search
         return None
+
+
+def attribute_or_item(obj, name):
+    try:
+        return getattr(obj, name)
+    except AttributeError:
+        return obj[name]
+
+
+def item_or_attribute(obj, name):
+    try:
+        return obj[name]
+    except KeyError:
+        return getattr(obj, name)
