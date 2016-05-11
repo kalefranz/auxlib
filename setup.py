@@ -9,7 +9,7 @@ import sys
 here = os.path.abspath(os.path.dirname(__file__))
 src_dir = os.path.join(here, "auxlib")
 sys.path.insert(0, src_dir)
-import auxlib
+import auxlib  # NOQA
 
 requirements = []
 
