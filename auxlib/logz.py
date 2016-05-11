@@ -16,6 +16,11 @@ INFO_FORMATTER = logging.Formatter(
     "%Y-%m-%d %H:%M:%S")
 
 
+StdOutHandler
+StdErrHandler
+
+
+
 def set_root_level(level=logging.INFO):
     root_log.setLevel(level)
 
