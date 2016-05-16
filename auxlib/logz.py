@@ -1,33 +1,33 @@
 # -*- coding: utf-8 -*-
 from json import JSONEncoder
-import logging
+from logging import getLogger, INFO, Handler, Formatter, StreamHandler, DEBUG
 from sys import stderr
 
-log = logging.getLogger(__name__)
-root_log = logging.getLogger()
+log = getLogger(__name__)
+root_log = getLogger()
 
-DEBUG_FORMATTER = logging.Formatter(
+DEBUG_FORMATTER = Formatter(
     "[%(levelname)s] [%(asctime)s.%(msecs)03d] %(process)d %(name)s:%(funcName)s(%(lineno)d):\n"
     "%(message)s\n",
     "%Y-%m-%d %H:%M:%S")
 
-INFO_FORMATTER = logging.Formatter(
+INFO_FORMATTER = Formatter(
     "[%(levelname)s] [%(asctime)s.%(msecs)03d] %(process)d %(name)s(%(lineno)d): %(message)s\n",
     "%Y-%m-%d %H:%M:%S")
 
 
-def set_root_level(level=logging.INFO):
+def set_root_level(level=INFO):
     root_log.setLevel(level)
 
 
-def attach_stderr(level=logging.INFO):
+def attach_stderr(level=INFO):
     has_stderr_handler = any(handler.name == 'stderr' for handler in root_log.handlers)
     if not has_stderr_handler:
-        handler = logging.StreamHandler(stderr)
+        handler = StreamHandler(stderr)
         handler.name = 'stderr'
         if level is not None:
             handler.setLevel(level)
-        handler.setFormatter(DEBUG_FORMATTER if level == logging.DEBUG else INFO_FORMATTER)
+        handler.setFormatter(DEBUG_FORMATTER if level == DEBUG else INFO_FORMATTER)
         root_log.addHandler(handler)
         return True
     else:
@@ -42,8 +42,13 @@ def detach_stderr():
     return False
 
 
-def initialize_logging(level=logging.INFO):
+def initialize_logging(level=INFO):
     attach_stderr(level)
+
+
+class NullHandler(Handler):
+    def emit(self, record):
+        pass
 
 
 class DumpEncoder(JSONEncoder):

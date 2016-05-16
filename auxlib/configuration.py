@@ -301,7 +301,7 @@ class YamlSource(Source):
             if self.provides is None:
                 return contents
             else:
-                return {key: contents[key] for key in self.provides}
+                return dict((key, contents[key]) for key in self.provides)
 
 
 class EnvironmentMappedSource(Source):

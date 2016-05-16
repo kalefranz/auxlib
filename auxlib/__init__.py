@@ -22,9 +22,9 @@ Major areas addressed include:
 
 """
 from __future__ import absolute_import, division, print_function
-from logging import getLogger, NullHandler
 
 # don't mess up logging for library users
+from .logz import getLogger, NullHandler
 getLogger('auxlib').addHandler(NullHandler())
 
 from .packaging import BuildPyCommand, SDistCommand, Tox, get_version  # NOQA

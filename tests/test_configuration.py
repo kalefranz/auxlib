@@ -84,12 +84,14 @@ class BasicConfigTests(unittest.TestCase):
         self.assertEqual(False, self.config.foobaz)
 
     def test_get_attr_not_exist(self):
-        with self.assertRaises(NotFoundError):
+        def not_a_key():
             self.config.not_a_key
+        self.assertRaises(NotFoundError, not_a_key)
 
     def test_get_item_not_exist(self):
-        with self.assertRaises(NotFoundError):
+        def not_a_key():
             self.config['not_a_key']
+        self.assertRaises(NotFoundError, not_a_key)
 
     def test_get_method(self):
         self.assertEqual(False, self.config.get('foobaz'))
@@ -122,11 +124,13 @@ class BasicConfigTests(unittest.TestCase):
         self.assertEqual('now it does', self.config.doesnt_exist)
 
     def test_items(self):
-        self.assertTrue({('a_none', None), ('bool1', True)}.issubset(set(self.config.items())))
+        self.assertTrue(set((('a_none', None), ('bool1', True))).issubset(set(self.config.items())))
 
     def test_assignment_lock(self):
-        with self.assertRaises(AssignmentError):
+        def assign():
             self.config['bool2'] = 'false'
+        self.assertRaises(AssignmentError, assign)
+
 
     def test_config_no_sources(self):
         config = Configuration(APP_NAME)
@@ -138,8 +142,9 @@ class BasicConfigTests(unittest.TestCase):
         assert config.just_a_string == 'what say you'
 
         config.unset_env('an_int')
-        with self.assertRaises(NotFoundError):
+        def assertme():
             assert config.an_int == 55
+        self.assertRaises(NotFoundError, assertme)
 
         config.set_env('this_key', 'that value')
         config.set_env('that_key', '42.42')
@@ -149,10 +154,4 @@ class BasicConfigTests(unittest.TestCase):
 
     def test_config_no_sources_required_params(self):
         required_parameters = ('beta', 'theta')
-        with self.assertRaises(EnvironmentError):
-            Configuration(APP_NAME, required_parameters=required_parameters).verify()
-
-
-
-
-
+        self.assertRaises(EnvironmentError, Configuration(APP_NAME, required_parameters=required_parameters).verify)

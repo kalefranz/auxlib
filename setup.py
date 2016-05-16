@@ -16,6 +16,9 @@ requirements = []
 if sys.version_info < (3, 4):
     requirements.append("enum34")
 
+if sys.version_info < (2, 7):
+    requirements.append("ordereddict")
+
 with open(os.path.join(here, "README.rst")) as f:
     long_description = f.read()
 
@@ -47,6 +50,7 @@ setup(
         "Operating System :: Microsoft :: Windows",
         "Programming Language :: Python",
         "Programming Language :: Python :: 2",
+        "Programming Language :: Python :: 2.6",
         "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.4",

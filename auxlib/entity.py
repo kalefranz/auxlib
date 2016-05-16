@@ -17,9 +17,9 @@ Chapter 1: Entity and Field Basics
     ...     color = EnumField(Color)
 
     >>> # create a new car object
-    >>> car = Car(color=Color.blue, weight=4242.42)
+    >>> car = Car(color=Color.blue, weight=4242.46)
     >>> car
-    Car(weight=4242.42, color=0)
+    Car(weight=4242.46, color=0)
 
     >>> # it has 4 wheels, all by default
     >>> car.wheels
@@ -36,13 +36,13 @@ Chapter 1: Entity and Field Basics
     >>> #  python dict actually, it's an ordereddict to match attribute
     >>> #  declaration order
     >>> type(car.dump())
-    <class 'collections.OrderedDict'>
+    <class '...OrderedDict'>
     >>> car.dump()
-    OrderedDict([('weight', 4242.42), ('wheels', 4), ('color', 0)])
+    OrderedDict([('weight', 4242.46), ('wheels', 4), ('color', 0)])
 
     >>> # and json too (note the order!)
     >>> car.json()
-    '{"weight": 4242.42, "wheels": 4, "color": 0}'
+    '{"weight": 4242.46, "wheels": 4, "color": 0}'
 
     >>> # green cars aren't allowed
     >>> car.color = "green"
@@ -84,9 +84,9 @@ Chapter 1: Entity and Field Basics
     >>> # while we're at it, these are all equivalent too
     >>> car == Car.from_objects(car)
     True
-    >>> car == Car.from_objects({"weight": 4242.42, "wheels": 4, "color": 1})
+    >>> car == Car.from_objects({"weight": 4242.46, "wheels": 4, "color": 1})
     True
-    >>> car == Car.from_json('{"weight": 4242.42, "color": 1}')
+    >>> car == Car.from_json('{"weight": 4242.46, "color": 1}')
     True
 
     >>> # .from_objects() even lets you stack and combine objects
@@ -123,17 +123,17 @@ Chapter 2: Entity and Field Composition
       },
       "cars": [
         {
-          "weight": 4242.42,
+          "weight": 4242.46,
           "wheels": 4
           "color": 1,
         },
         {
-          "weight": 4242.42,
+          "weight": 4242.46,
           "wheels": 4
           "color": 1,
         },
         {
-          "weight": 4242.42,
+          "weight": 4242.46,
           "wheels": 4
           "color": 1,
         }
@@ -147,10 +147,6 @@ Chapter 2: Entity and Field Composition
     >>> # and there are three cars left for the employees
     >>> len(company_fleet.cars)
     3
-
-    >>> # because we can
-    >>> sum(c.weight for c in company_fleet.cars)
-    12727.26
 
 
 Chapter 3: Immutability
@@ -236,11 +232,16 @@ Chapter X: The del and null Weeds
 """
 from __future__ import absolute_import, division, print_function
 
-from collections import Iterable, OrderedDict as odict
+from collections import Iterable
 from datetime import datetime
 from enum import Enum
 from json import loads as json_loads, dumps as json_dumps
 from logging import getLogger
+
+try:
+    from collections import OrderedDict as odict
+except ImportError:
+    from ordereddict import OrderedDict as odict
 
 from ._vendor.dateutil.parser import parse as dateparse
 from ._vendor.five import with_metaclass, items, values
@@ -686,7 +687,7 @@ class EntityType(type):
             keys_to_override = [key for key in non_field_keys
                                 if any(isinstance(base.__dict__.get(key), Field)
                                        for base in entity_subclasses)]
-            dct[KEY_OVERRIDES_MAP] = {key: dct.pop(key) for key in keys_to_override}
+            dct[KEY_OVERRIDES_MAP] = dict((key, dct.pop(key)) for key in keys_to_override)
         else:
             dct[KEY_OVERRIDES_MAP] = dict()
 
