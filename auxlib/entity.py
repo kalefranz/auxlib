@@ -238,14 +238,9 @@ from enum import Enum
 from json import loads as json_loads, dumps as json_dumps
 from logging import getLogger
 
-try:
-    from collections import OrderedDict as odict
-except ImportError:
-    from ordereddict import OrderedDict as odict
-
 from ._vendor.dateutil.parser import parse as dateparse
-from ._vendor.five import with_metaclass, items, values
-from ._vendor.six import string_types, text_type, integer_types
+from .compat import (with_metaclass, string_types, text_type, integer_types, iteritems,
+                     itervalues, odict)
 from .collection import AttrDict
 from .exceptions import ValidationError, Raise
 from .ish import find_or_none
@@ -680,7 +675,7 @@ class EntityType(type):
     def __new__(mcs, name, bases, dct):
         # if we're about to mask a field that's already been created with something that's
         #  not a field, then assign it to an alternate variable name
-        non_field_keys = (key for key, value in items(dct)
+        non_field_keys = (key for key, value in iteritems(dct)
                           if not isinstance(value, Field) and not key.startswith('__'))
         entity_subclasses = EntityType.__get_entity_subclasses(bases)
         if entity_subclasses:
@@ -697,7 +692,7 @@ class EntityType(type):
         super(EntityType, cls).__init__(name, bases, attr)
         cls.__fields__ = odict(cls.__fields__) if hasattr(cls, '__fields__') else odict()
         cls.__fields__.update(sorted(((name, field.set_name(name))
-                                      for name, field in cls.__dict__.items()
+                                      for name, field in iteritems(cls.__dict__)
                                       if isinstance(field, Field)),
                                      key=lambda item: item[1]._order_helper))
         if hasattr(cls, '__register__'):
@@ -718,7 +713,7 @@ class Entity(object):
     __fields__ = odict()
 
     def __init__(self, **kwargs):
-        for key, field in items(self.__fields__):
+        for key, field in iteritems(self.__fields__):
             try:
                 setattr(self, key, kwargs[key])
             except KeyError:
@@ -754,7 +749,7 @@ class Entity(object):
     def validate(self):
         # TODO: here, validate should only have to determine if the required keys are set
         try:
-            all(getattr(self, name) for name, field in self.__fields__.items() if field.required)
+            all(getattr(self, name) for name, field in iteritems(self.__fields__) if field.required)
         except AttributeError as e:
             raise ValidationError(None, msg=e)
 
@@ -800,7 +795,7 @@ class Entity(object):
     @classmethod
     def __dump_fields(cls):
         if '__dump_fields_cache' not in cls.__dict__:
-            cls.__dump_fields_cache = tuple(field for field in values(cls.__fields__)
+            cls.__dump_fields_cache = tuple(field for field in itervalues(cls.__fields__)
                                             if field.in_dump)
         return cls.__dump_fields_cache
 
