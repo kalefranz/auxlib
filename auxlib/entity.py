@@ -738,6 +738,9 @@ class Entity(object):
             reduce(lambda _, name: getattr(self, name),
                    (name for name, field in iteritems(self.__fields__) if field.required)
                    )
+        except TypeError as e:
+            if str(e) == "reduce() of empty sequence with no initial value":
+                pass
         except AttributeError as e:
             raise ValidationError(None, msg=e)
 
