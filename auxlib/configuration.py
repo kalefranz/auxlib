@@ -25,18 +25,18 @@ Notes:
 
 """
 from __future__ import absolute_import, division, print_function
+
 import inspect
 import logging
 import os
 import signal
 
-from ._vendor.five import string_t as string_types
-from .type_coercion import listify
+from .compat import string_types
 from .decorators import memoize, memoizemethod
 from .exceptions import AssignmentError, NotFoundError
 from .path import PackageFile
+from .type_coercion import listify
 from .type_coercion import typify
-
 
 log = logging.getLogger(__name__)
 

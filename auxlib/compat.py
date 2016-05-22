@@ -8,4 +8,4 @@ except ImportError:
 
 from ._vendor.five import with_metaclass  # NOQA
 from ._vendor.six import (string_types, text_type, integer_types, iteritems, itervalues,
-                          iterkeys)  # NOQA
+                          iterkeys, wraps)  # NOQA
