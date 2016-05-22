@@ -373,12 +373,11 @@ class Field(object):
     #   on __prepare__.  Strategy lifted from http://stackoverflow.com/a/4460034/2127762
     _order_helper = 0
 
-    def __init__(self, default=None, required=True, validation=None, post_validation=None,
+    def __init__(self, default=None, required=True, validation=None,
                  in_dump=True, nullable=False, immutable=False):
         self._default = default if callable(default) else self.box(None, default)
         self._required = required
         self._validation = validation
-        self._post_validation = post_validation
         self._in_dump = in_dump
         self._nullable = nullable
         self._immutable = immutable
@@ -420,8 +419,7 @@ class Field(object):
         if val is None and not self.nullable:
             # means the "tricky edge case" was activated in __delete__
             raise AttributeError("The {0} field has been deleted.".format(self.name))
-        return self.post_validate(instance, instance_type,
-                                  self.unbox(instance, instance_type, val))
+        return self.unbox(instance, instance_type, val)
 
     def __set__(self, instance, val):
         if self.immutable and instance._initd:
@@ -467,20 +465,6 @@ class Field(object):
         if isinstance(val, self._type) and (self._validation is None or self._validation(val)):
                 return val
         elif val is None and self.nullable:
-            return val
-        else:
-            raise ValidationError(getattr(self, 'name', 'undefined name'), val)
-
-    def post_validate(self, instance, instance_type, val):
-        """
-
-        Returns:
-            True: if val is valid
-
-        Raises:
-            ValidationError
-        """
-        if self._post_validation is None or not instance._initd or self._post_validation(val):
             return val
         else:
             raise ValidationError(getattr(self, 'name', 'undefined name'), val)
@@ -556,11 +540,11 @@ class DateField(Field):
 class EnumField(Field):
 
     def __init__(self, enum_class, default=None, required=True, validation=None,
-                 post_validation=None, in_dump=True, nullable=False, immutable=False):
+                 in_dump=True, nullable=False, immutable=False):
         if not issubclass(enum_class, Enum):
             raise ValidationError(None, msg="enum_class must be an instance of Enum")
         self._type = enum_class
-        super(EnumField, self).__init__(default, required, validation, post_validation,
+        super(EnumField, self).__init__(default, required, validation,
                                         in_dump, nullable, immutable)
 
     def box(self, instance, val):
@@ -585,9 +569,9 @@ class ListField(Field):
     _type = tuple
 
     def __init__(self, element_type, default=None, required=True, validation=None,
-                 post_validation=None, in_dump=True, nullable=False, immutable=False):
+                 in_dump=True, nullable=False, immutable=False):
         self._element_type = element_type
-        super(ListField, self).__init__(default, required, validation, post_validation,
+        super(ListField, self).__init__(default, required, validation,
                                         in_dump, nullable, immutable)
 
     def box(self, instance, val):
@@ -641,9 +625,9 @@ class MapField(Field):
 class ComposableField(Field):
 
     def __init__(self, field_class, default=None, required=True, validation=None,
-                 post_validation=None, in_dump=True, nullable=False, immutable=False):
+                 in_dump=True, nullable=False, immutable=False):
         self._type = field_class
-        super(ComposableField, self).__init__(default, required, validation, post_validation,
+        super(ComposableField, self).__init__(default, required, validation,
                                               in_dump, nullable, immutable)
 
     def box(self, instance, val):
