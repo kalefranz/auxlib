@@ -138,10 +138,7 @@ def _get_version_from_git_tag(path):
     if m is None:
         return None
     version, post_commit, hash = m.groups()
-    if post_commit == 0:
-        return version
-    else:
-        return "{0}.dev{1}+{2}".format(version, post_commit, hash)
+    return version if post_commit == '0' else "{0}.dev{1}+{2}".format(version, post_commit, hash)
 
 
 def get_version(dunder_file):
@@ -190,6 +187,7 @@ class BuildPyCommand(build_py):
         target_dir = join(self.build_lib, self.distribution.metadata.name)
         write_version_into_init(target_dir, self.distribution.metadata.version)
         write_version_file(target_dir, self.distribution.metadata.version)
+        # TODO: separate out .version file implementation
 
 
 class SDistCommand(sdist):
@@ -201,6 +199,7 @@ class SDistCommand(sdist):
 
 
 class Tox(TestCommand):
+    # TODO: Make this class inherit from distutils instead of setuptools
     user_options = [('tox-args=', 'a', "Arguments to pass to tox")]
 
     def initialize_options(self):
@@ -213,7 +212,7 @@ class Tox(TestCommand):
         self.test_suite = True
 
     def run_tests(self):
-        # import here, cause outside the eggs aren't loaded
+        # import here, because outside the eggs aren't loaded
         from tox import cmdline
         from shlex import split
         args = self.tox_args
