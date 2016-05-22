@@ -556,12 +556,12 @@ class DateField(Field):
 class EnumField(Field):
 
     def __init__(self, enum_class, default=None, required=True, validation=None,
-                 post_validation=None, in_dump=True, nullable=False):
+                 post_validation=None, in_dump=True, nullable=False, immutable=False):
         if not issubclass(enum_class, Enum):
             raise ValidationError(None, msg="enum_class must be an instance of Enum")
         self._type = enum_class
         super(EnumField, self).__init__(default, required, validation, post_validation,
-                                        in_dump, nullable)
+                                        in_dump, nullable, immutable)
 
     def box(self, instance, val):
         if val is None:
@@ -585,10 +585,10 @@ class ListField(Field):
     _type = tuple
 
     def __init__(self, element_type, default=None, required=True, validation=None,
-                 post_validation=None, in_dump=True, nullable=False):
+                 post_validation=None, in_dump=True, nullable=False, immutable=False):
         self._element_type = element_type
         super(ListField, self).__init__(default, required, validation, post_validation,
-                                        in_dump, nullable)
+                                        in_dump, nullable, immutable)
 
     def box(self, instance, val):
         if val is None:
@@ -641,10 +641,10 @@ class MapField(Field):
 class ComposableField(Field):
 
     def __init__(self, field_class, default=None, required=True, validation=None,
-                 post_validation=None, in_dump=True, nullable=False):
+                 post_validation=None, in_dump=True, nullable=False, immutable=False):
         self._type = field_class
         super(ComposableField, self).__init__(default, required, validation, post_validation,
-                                              in_dump, nullable)
+                                              in_dump, nullable, immutable)
 
     def box(self, instance, val):
         if val is None:
