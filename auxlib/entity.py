@@ -232,6 +232,8 @@ Chapter X: The del and null Weeds
 """
 from __future__ import absolute_import, division, print_function
 
+from functools import reduce
+
 from collections import Iterable
 from datetime import datetime
 from enum import Enum
@@ -749,7 +751,9 @@ class Entity(object):
     def validate(self):
         # TODO: here, validate should only have to determine if the required keys are set
         try:
-            all(getattr(self, name) for name, field in iteritems(self.__fields__) if field.required)
+            reduce(lambda _, name: getattr(self, name),
+                   (name for name, field in iteritems(self.__fields__) if field.required)
+                   )
         except AttributeError as e:
             raise ValidationError(None, msg=e)
 
