@@ -1,0 +1,6 @@
+new_param: 42
+foo: bar
+nonetype: 
+bool1: yes
+bool2: True
+bool3: on

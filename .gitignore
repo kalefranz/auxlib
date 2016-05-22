@@ -1,4 +1,4 @@
-# Created by https://www.gitignore.io
+.version
 
 ### Python ###
 # Byte-compiled / optimized / DLL files
@@ -22,6 +22,8 @@ lib64/
 parts/
 sdist/
 var/
+ve/
+venv/
 *.egg-info/
 .installed.cfg
 *.egg
@@ -45,6 +47,7 @@ htmlcov/
 nosetests.xml
 coverage.xml
 *,cover
+junit*.xml
 
 # Translations
 *.mo
@@ -54,7 +57,7 @@ coverage.xml
 *.log
 
 # Sphinx documentation
-docs/_build/
+docs/build/
 
 # PyBuilder
 target/

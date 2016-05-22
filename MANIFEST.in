@@ -1,0 +1,8 @@
+include LICENSE
+include MANIFEST.in
+include README.rst
+include setup.cfg
+include setup.py
+include auxlib/.version
+prune *.pyc
+prune *.sw*

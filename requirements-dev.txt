@@ -1,0 +1,13 @@
+setuptools
+tox
+flake8
+radon
+xenon
+pytest
+pytest-cov
+ddt
+testtools
+pycrypto
+pyyaml
+requests
+enum34
