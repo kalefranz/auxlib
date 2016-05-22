@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Common collection classes."""
 from __future__ import print_function, division, absolute_import
+from functools import reduce
 
 
 # http://stackoverflow.com/a/14620633/2127762
@@ -53,32 +54,17 @@ def first(seq, key=lambda x: bool(x), default=None, apply=lambda x: x):
     return next((apply(x) for x in seq if key(x)), default)
 
 
-def cumulative_first(seq, key=lambda x: bool(x), apply=lambda x: x):
-    """like first, but cumulative, up to and including first
-
-    unlike first, there is no default; where default would be returned in first, all of seq is
-    returned in cumulative_first
-
-    Args:
-        seq (iterable):
-        key (callable): test for each element of seq
-        apply (callable): applied to each element before return
-
-    Examples:
-        >>> cumulative_first([0, False, None, [], (), 42])
-        (0, False, None, [], (), 42)
-        >>> cumulative_first([0, False, 'some', [], (), 42])
-        (0, False, 'some')
-
-    """
-    lst = []
-    for element in seq:
-        lst.append(apply(element))
-        if key(element):
-            break
-    return tuple(lst)
-
-
 def last(seq, key=lambda x: bool(x), default=None, apply=lambda x: x):
     return next((apply(x) for x in reversed(seq) if key(x)), default)
 
+
+def call_each(seq):
+    """Calls each element of sequence to invoke the side effect.
+
+    Args:
+        seq:
+
+    Returns: None
+
+    """
+    reduce(lambda _, y: y(), seq)
