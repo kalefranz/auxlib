@@ -39,7 +39,7 @@ python stdlib gaps much like `pytoolz <https://github.com/pytoolz/>`_ has for fu
 programming, `pyrsistent <https://github.com/tobgu/pyrsistent/>`_ has for data structures, or
 `boltons <https://github.com/mahmoud/boltons/>`_ has generally.
 
-Major areas addressed include:
+Major areas addressed include
   - `packaging <http://auxlib.readthedocs.org/en/latest/reference/auxlib.packaging.html>`_
        package versioning, with a clean and less invasive alternative to versioneer
   - `entity <http://auxlib.readthedocs.org/en/latest/reference/auxlib.entity.html>`_
