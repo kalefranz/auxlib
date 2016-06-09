@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
 """
+This module provides serializable, validatable, type-enforcing domain objects and data
+transfer objects. It has many of the same motivations as the python
+`Marshmallow <http://marshmallow.readthedocs.org/en/latest/why.html>`_ package. It is most
+similar to `Schematics <http://schematics.readthedocs.io/>`_.
+
 ========
 Tutorial
 ========
@@ -262,23 +267,6 @@ KEY_OVERRIDES_MAP = "__key_overrides__"
 
 
 NOTES = """
-This module provides facilities for serializable, validatable, and type-enforcing
-domain objects.
-
-This module has many of the same motivations as the python Marshmallow package.
-<http://marshmallow.readthedocs.org/en/latest/why.html>
-
-Also need to be explicit in explaining what Marshmallow doesn't do, and why this module is needed.
-  - Provides type safety like an ORM. And like an ORM, all classes subclass Entity.
-  - Provides BUILT IN serialization and deserialization.  Marhmallow requires a lot of code
-    duplication.
-
-This module gives us:
-  - type safety
-  - custom field validation
-  - serialization and deserialization
-  - rock solid foundational domain objects
-
 
 Current deficiencies to schematics:
   - no get_mock_object method
