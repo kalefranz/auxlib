@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, division, print_function
 from logging import getLogger
+from unittest import TestCase
 
 from requests import Request
-from testtools import TestCase
 
 from auxlib.logz import attach_stderr, detach_stderr, initialize_logging, stringify
 

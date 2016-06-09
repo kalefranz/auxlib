@@ -2,9 +2,7 @@
 import datetime
 from enum import Enum
 import time
-import unittest
-
-from testtools import TestCase, ExpectedException
+from unittest import TestCase
 
 from auxlib._vendor.dateutil.parser import parse
 from auxlib._vendor.six import string_types, integer_types
@@ -55,7 +53,7 @@ class DerivedSampleEntity(SampleEntity):
         super(DerivedSampleEntity, self).__init__(new_field=new_field, **kwargs)
 
 
-class EntityTests(unittest.TestCase):
+class EntityTests(TestCase):
 
     def test_sample_entity(self):
         se = SampleEntity(string_field='bazaar', integer_field=28, enum_field=ChooseOne.B)
@@ -65,8 +63,7 @@ class EntityTests(unittest.TestCase):
         self.assertEqual('b', se.enum_field.value)
 
     def test_derived_sample_entity(self):
-        with ExpectedException(ValidationError):
-            DerivedSampleEntity(18, string_field_w_default='taxi')
+        self.assertRaises(ValidationError, DerivedSampleEntity, 18, string_field_w_default='taxi')
         dse = DerivedSampleEntity(18, string_field_w_default='taxi', string_field='boo',
                                   integer_field=14)
         self.assertEqual(18, dse.new_field)
@@ -149,14 +146,12 @@ class EntityTests(unittest.TestCase):
                                   integer_field=14)
         assert dse.integer_field == 14
 
-        with ExpectedException(ValidationError):
-            dse.integer_field = 14.4
+        self.assertRaises(ValidationError, setattr, dse, 'integer_field', 14.4)
 
         dse.integer_field += 14
         assert dse.integer_field == 28
 
-        with ExpectedException(ValidationError):
-            dse.integer_field = None
+        self.assertRaises(ValidationError, setattr, dse, 'integer_field', None)
 
     def test_inherited_field_with_default_value(self):
         dse = DerivedSampleEntity(18, string_field_w_default='taxi', string_field='boo',
@@ -166,11 +161,8 @@ class EntityTests(unittest.TestCase):
         dse.integer_field_w_default *= 2
         assert dse.integer_field_w_default == 84
 
-        with ExpectedException(ValidationError):
-            dse.integer_field_w_default = 14.4
-
-        with ExpectedException(ValidationError):
-            dse.integer_field = None
+        self.assertRaises(ValidationError, setattr, dse, 'integer_field_w_default', 14.4)
+        self.assertRaises(ValidationError, setattr, dse, 'integer_field', 14.4)
 
     def test_entity_fields_list(self):
         fields = DerivedSampleEntity.fields
@@ -189,27 +181,25 @@ class EntityTests(unittest.TestCase):
         assert se2.string_field_w_default == se.string_field_w_default
 
         del se_dumped['string_field']
-        with ExpectedException(ValidationError):
-            SampleEntity.from_json(jsondumps(se_dumped))
+        self.assertRaises(ValidationError, SampleEntity.from_json, jsondumps(se_dumped))
 
 
 class MiscFieldTests(TestCase):
 
     def test_unassigned_name_throws_error(self):
         field = IntField()
-        with ExpectedException(AttributeError):
-            field.name
+        self.assertRaises(AttributeError, lambda: field.name)
 
         class Clazz(object):
             int_field = IntField()
         clazz = Clazz()
-        with ExpectedException(AttributeError):
-            clazz.int_field
+        self.assertRaises(AttributeError, lambda: clazz.int_field)
 
     def test_invalid_default(self):
-        with ExpectedException(ValidationError):
+        def make_clazz():
             class Clazz(Entity):
                 int_field = IntField('18')
+        self.assertRaises(ValidationError, make_clazz)
 
     def test_or_none_field_option(self):
         class Clazz(Entity):
@@ -265,12 +255,9 @@ class EnumFieldTests(TestCase):
         assert ee.enum_field_w_xtra_validation == Number.Two
         assert ee.enum_field_wo_dump == Color.Black
 
-        with ExpectedException(ValidationError):
-            ee.enum_field_w_default_wo_required = None
-
+        self.assertRaises(ValidationError, setattr, ee, 'enum_field_w_default_wo_required', None)
         del ee.enum_field_w_default_wo_required
-        with ExpectedException(AttributeError):
-            ee.enum_field_w_default_wo_required
+        self.assertRaises(AttributeError, lambda:  ee.enum_field_w_default_wo_required)
 
     def test_default(self):
         ee = EnumEntity(enum_field=Color.Red)
@@ -283,16 +270,13 @@ class EnumFieldTests(TestCase):
         assert ee2.enum_field_w_default_wo_required == Color.Blue
 
     def test_required_throws_exception(self):
-        with ExpectedException(ValidationError):
-            EnumEntity()
+        self.assertRaises(ValidationError, EnumEntity)
 
     def test_wo_required_throws_exception(self):
-        with ExpectedException(ValidationError):
-            EnumEntity(enum_field=Color.Red, enum_field_w_default_wo_required=2)
+        self.assertRaises(ValidationError, EnumEntity, enum_field=Color.Red, enum_field_w_default_wo_required=2)
 
-        with ExpectedException(ValidationError):
-            ee = EnumEntity(enum_field=Color.Red)
-            ee.enum_field_w_default_wo_required = Number.Four
+        ee = EnumEntity(enum_field=Color.Red)
+        self.assertRaises(ValidationError, setattr, ee, 'enum_field_w_default_wo_required', Number.Four)
 
     def test_required(self):
         ee = EnumEntity(enum_field=Color.Red, enum_field_w_default_wo_required='red')
@@ -304,12 +288,10 @@ class EnumFieldTests(TestCase):
         assert ee.enum_field == Color.Black
         assert ee.enum_field_w_default_wo_required == Color.Black
 
-        with ExpectedException(ValidationError):
-            EnumEntity(enum_field_w_xtra_validation=Number.Four)
+        self.assertRaises(ValidationError, EnumEntity, enum_field_w_xtra_validation=Number.Four)
 
     def test_validation(self):
-        with ExpectedException(ValidationError):
-            EnumEntity(enum_field='purple')
+        self.assertRaises(ValidationError, EnumEntity, enum_field='purple')
 
         ee = EnumEntity(enum_field=Color.Red)
         assert ee.enum_field_w_xtra_validation == Number.Two
@@ -317,14 +299,9 @@ class EnumFieldTests(TestCase):
         ee.enum_field_w_xtra_validation = 3
         assert ee.enum_field_w_xtra_validation == Number.Three
 
-        with ExpectedException(ValidationError):
-            ee.enum_field_w_default = 'red'
-
-        with ExpectedException(ValidationError):
-            EnumEntity(enum_field=Color.Red, enum_field_w_xtra_validation=Number.Four)
-
-        with ExpectedException(ValidationError):
-            ee.enum_field_w_xtra_validation = 1
+        self.assertRaises(ValidationError, setattr, ee, 'enum_field_w_default', 'red')
+        self.assertRaises(ValidationError, EnumEntity, enum_field=Color.Red, enum_field_w_xtra_validation=Number.Four)
+        self.assertRaises(ValidationError, setattr, ee, 'enum_field_w_xtra_validation', 1)
 
     def test_in_dump(self):
         ee = EnumEntity(enum_field=Color.Red)
@@ -365,27 +342,20 @@ class StringFieldTests(TestCase):
         sf = StringEntity(field="maple", field_w_validation="oak")
         assert sf.field == "maple"
         assert sf.field_w_default_wo_required == "elm"
-        with ExpectedException(AttributeError):
-            sf.field_wo_default_wo_required
+        self.assertRaises(AttributeError, lambda: sf.field_wo_default_wo_required)
+        self.assertRaises(ValidationError, setattr, sf, 'field', None)
 
-        with ExpectedException(ValidationError):
-            sf.field = None
-
-        with ExpectedException(ValidationError):
-            sf.field_w_default_wo_required = None
+        self.assertRaises(ValidationError, setattr, sf, 'field_w_default_wo_required', None)
         del sf.field_w_default_wo_required
         sf.field_wo_default_wo_required = "birch"
 
-        with ExpectedException(AttributeError):
-            sf.field_w_default_wo_required
+        self.assertRaises(AttributeError, lambda: sf.field_w_default_wo_required)
         assert sf.field_wo_default_wo_required == "birch"
 
-        with ExpectedException(ValidationError):
-            sf.field_wo_default_wo_required = None
+        self.assertRaises(ValidationError, setattr, sf, 'field_wo_default_wo_required', None)
 
         del sf.field_wo_default_wo_required
-        with ExpectedException(AttributeError):
-            sf.field_wo_default_wo_required
+        self.assertRaises(AttributeError, lambda: sf.field_wo_default_wo_required)
 
     def test_assignment(self):
         sf = StringEntity(field="maple", field_w_validation="oak")
@@ -410,21 +380,14 @@ class StringFieldTests(TestCase):
         assert sf.field_w_default_w_validation == "coconut"
         assert sf.field_wo_dump == "pineapple"
 
-        with ExpectedException(ValidationError):
-            sf.field_w_default_wo_required = None
+        self.assertRaises(ValidationError, setattr, sf, 'field_w_default_wo_required', None)
 
         del sf.field_w_default_wo_required
-        with ExpectedException(AttributeError):
-            sf.field_w_default_wo_required
+        self.assertRaises(AttributeError, lambda: sf.field_w_default_wo_required)
 
-        with ExpectedException(ValidationError):
-            sf.field_w_validation = "coconut"
-
-        with ExpectedException(ValidationError):
-            sf.field_w_default_w_validation = "plum"
-
-        with ExpectedException(ValidationError):
-            StringEntity(field=8)
+        self.assertRaises(ValidationError, setattr, sf, 'field_w_validation', 'coconut')
+        self.assertRaises(ValidationError, setattr, sf, 'field_w_default_w_validation', 'plum')
+        self.assertRaises(ValidationError, StringEntity, field=8)
 
     def test_assignment_unicode(self):
         sf = StringEntity(field=u"màple", field_w_validation=u"öak")
@@ -450,14 +413,13 @@ class StringFieldTests(TestCase):
         assert len(d) == 0
 
     def test_invalidatable(self):
-        with ExpectedException(ValidationError):
+        def clazz():
             class StringEntity2(Entity):
                 bad_field_default = StringField("redwood", validation=lambda v: len(v) < 3)
-            StringEntity2()
+        self.assertRaises(ValidationError, clazz)
 
     def test_nullable_wo_default(self):
-        with ExpectedException(ValidationError):
-            StringEntityNullable(field_w_validation="")
+        self.assertRaises(ValidationError, StringEntityNullable, field_w_validation="")
         sen = StringEntityNullable(field="blue", field_w_validation="red")
         assert sen.field == "blue"
         assert sen.field_w_validation == "red"
@@ -470,8 +432,7 @@ class StringFieldTests(TestCase):
         sen.field = 'apple'
         sen.field_w_validation = 'pear'
 
-        with ExpectedException(ValidationError):
-            sen.field_w_validation = 'pineapple'
+        self.assertRaises(ValidationError, setattr, sen, 'field_w_validation', 'pineapple')
 
         assert sen.field == 'apple'
         assert sen.field_w_validation == 'pear'
@@ -494,8 +455,7 @@ class StringFieldTests(TestCase):
         assert sen.field is None
 
     def test_nullable_w_default(self):
-        with ExpectedException(ValidationError):
-            StringEntityNullable(field_w_default=None, field_w_default_wo_required=None)
+        self.assertRaises(ValidationError, StringEntityNullable, field_w_default=None, field_w_default_wo_required=None)
         sen = StringEntityNullable(field=None, field_w_validation="", field_w_default=None,
                                    field_w_default_wo_required=None)
         assert sen.field is None
@@ -565,18 +525,13 @@ class DateFieldTests(TestCase):
 
     def test_assignment_error(self):
         df = DateEntity(field=NOW.isoformat())
-        with ExpectedException(ValidationError):
-            df.field_w_default_w_validation = parse('2014')
+        self.assertRaises(ValidationError, setattr, df, 'field_w_default_w_validation', parse('2014'))
 
-        with ExpectedException(ValidationError):
-            DateEntity(field=NOW.isoformat(),
-                       field_w_default_w_validation=parse('2014').isoformat())
+        self.assertRaises(ValidationError, DateEntity, field=NOW.isoformat(), field_w_default_w_validation=parse('2014').isoformat())
 
-        with ExpectedException(ValidationError):
-            DateEntity(field='not parseable as a date')
+        self.assertRaises(ValidationError, DateEntity, field='not parseable as a date')
 
-        with ExpectedException(ValidationError):
-            DateEntity(field=15)
+        self.assertRaises(ValidationError, DateEntity, field=15)
 
     def test_callable_defaults(self):
         de = DateEntity(field=NOW)
@@ -594,8 +549,7 @@ class DateFieldTests(TestCase):
 
         assert de.field_wo_required_w_nullable == None
 
-        with ExpectedException(ValidationError):
-            de.field = None
+        self.assertRaises(ValidationError, setattr, de, 'field', None)
 
         de.field_wo_required_w_nullable = NOW
         assert de.field_wo_required_w_nullable == NOW
@@ -629,37 +583,28 @@ class ListFieldTests(TestCase):
         assert le.field == tuple(['ghi', u'jkl', 'mno'])
         assert le.field_w_default == tuple([81, 82, 83, 84])
 
-        with ExpectedException(ValidationError):
-            le.field = ['ghi', 10, 'mno']
-
-        with ExpectedException(ValidationError):
-            le.field_w_default = [81, 84.4, 10]
+        self.assertRaises(ValidationError, setattr, le, 'field', ['ghi', 10, 'mno'])
+        self.assertRaises(ValidationError, setattr, le, 'field_w_default', [81, 84.4, 10])
 
     def test_assignment_wo_required(self):
         le = ListEntity(field=['abc', 'def'])
 
         assert not hasattr(le, 'field_wo_required')
-        with ExpectedException(AttributeError):
-            le.field_wo_required
+        self.assertRaises(AttributeError, lambda: le.field_wo_required)
 
         le.field_wo_required = [33.3, 44.4]
         assert le.field_wo_required == tuple([33.3, 44.4])
 
-        with ExpectedException(ValidationError):
-            le.field_wo_required = None
+        self.assertRaises(ValidationError, setattr, le, 'field_wo_required',  None)
         del le.field_wo_required
         assert not hasattr(le, 'field_wo_required')
-        with ExpectedException(AttributeError):
-            le.field_wo_required
+        self.assertRaises(AttributeError, lambda: le.field_wo_required)
 
     def test_non_iterable_assignment(self):
         le = ListEntity(field=['abc', 'def'])
 
-        with ExpectedException(ValidationError):
-            le.field = "just a string"
-
-        with ExpectedException(ValidationError):
-            le.field = 123456
+        self.assertRaises(ValidationError, setattr, le, 'field', "just a string")
+        self.assertRaises(ValidationError, setattr, le, 'field', 123456)
 
     def test_dump_simple_list(self):
         le = ListEntity(field=['abc', 'def'])
@@ -669,8 +614,8 @@ class ListFieldTests(TestCase):
 
     def test_nullable_list_field(self):
         le = ListEntity(field=['abc', 'def'])
-        with ExpectedException(ValidationError):
-            le.field = None
+        self.assertRaises(ValidationError, setattr, le, 'field', None)
+
         le.field_nullable = None
         assert le.field_nullable == None
 
@@ -691,16 +636,12 @@ class BooleanFieldTests(TestCase):
         assert be.field1 == False
         assert be.field2 is None
 
-        with ExpectedException(ValidationError):
-            be.field1 = None
+        self.assertRaises(ValidationError, setattr, be, 'field1', None)
 
     def test_boolean_nullable_no_default(self):
         class BooleanEntity2(Entity):
             field = BooleanField(nullable=True)
-
-        with ExpectedException(ValidationError):
-            BooleanEntity2()
-
+        self.assertRaises(ValidationError, BooleanEntity2)
 
 
 # TODO:

@@ -1,8 +1,8 @@
+from unittest import TestCase
+
 import os
-import unittest
 
 from ddt import ddt, unpack, data
-from testtools import TestCase
 
 import auxlib.configuration
 from auxlib.configuration import make_env_key, Configuration, reverse_env_key, YamlSource
@@ -55,7 +55,7 @@ class UtilityTests(TestCase):
 
 
 @ddt
-class BasicConfigTests(unittest.TestCase):
+class BasicConfigTests(TestCase):
 
     def setUp(self):
         super(BasicConfigTests, self).setUp()

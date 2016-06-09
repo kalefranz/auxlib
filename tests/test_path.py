@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 import logging
-
-from testtools import TestCase, ExpectedException
+from unittest import TestCase
 
 from auxlib import logz
 from auxlib.path import PackageFile, find_file_in_site_packages, open_package_file
@@ -53,5 +52,4 @@ class PackageFileTests(TestCase):
             assert any(line.startswith('class AESCipher') for line in lines)
 
     def test_no_file_found(self):
-        with ExpectedException(IOError):
-            open_package_file('not-a-file.txt', 'auxlib')
+        self.assertRaises(IOError, open_package_file, 'not-a-file.txt', 'auxlib')

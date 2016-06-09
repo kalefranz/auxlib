@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, division, print_function
-import random
-import os
 
-from testtools import TestCase
+from unittest import TestCase
+
+import os
 
 from auxlib.packaging import get_version
 # from auxlib.packaging import (_get_version_from_pkg_info, _is_git_dirty, _get_most_recent_git_tag,

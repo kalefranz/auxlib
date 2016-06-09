@@ -2,8 +2,9 @@
 from __future__ import absolute_import, division, print_function
 import json
 import logging
+from unittest import TestCase
+
 from enum import Enum
-import testtools
 
 from auxlib.entity import Entity, StringField, ComposableField, EnumField, ListField
 
@@ -107,7 +108,7 @@ class SimpleList(Entity):
     parents = ListField(Commit)
 
 
-class ClassFieldTests(testtools.TestCase):
+class ClassFieldTests(TestCase):
 
     def test_most_simplest(self):
         obj_dict = json.loads(json_string_simple)

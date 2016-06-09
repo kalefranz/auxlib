@@ -1,4 +1,4 @@
-from testtools import TestCase, ExpectedException
+from unittest import TestCase
 
 from auxlib.configuration import Configuration
 from auxlib.exceptions import InitializationError
@@ -53,18 +53,17 @@ class GatewayBaseTests(TestCase):
         self.appcontext = AppContext('foo', package='auxlib')
 
     def test_get_instance_before_initialization(self):
-        with ExpectedException(InitializationError):
-            AnotherFactory.factory.get_instance()
-        with ExpectedException(InitializationError):
-            AnotherFactory.factory.get_instance()
-        with ExpectedException(RuntimeError):
-            AnotherFactory.factory.initialize(self.appcontext, ThisImplementation)
+        self.assertRaises(InitializationError, AnotherFactory.factory.get_instance)
+        self.assertRaises(InitializationError, AnotherFactory.factory.get_instance)
+        self.assertRaises(RuntimeError, AnotherFactory.factory.initialize,
+                          self.appcontext, ThisImplementation)
+
         AnotherFactory.factory.initialize(self.appcontext, AnotherImplementation)
         self.assertTrue(AnotherFactory.factory.get_instance())
 
     def test_initialize_unregistered_class(self):
-        with ExpectedException(RuntimeError):
-            SomeFactory.factory.initialize(self.appcontext, 'NotARegisteredClass')
+        self.assertRaises(RuntimeError, SomeFactory.factory.initialize,
+                          self.appcontext, 'NotARegisteredClass')
 
     def test_cached_instances(self):
         SomeFactory.factory.initialize(self.appcontext, 'ThatImplementation')

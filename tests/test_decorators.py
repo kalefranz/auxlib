@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, division, print_function
 from logging import getLogger
+from unittest import TestCase
 
 from auxlib.decorators import classproperty
-from testtools import TestCase, ExpectedException
 
 log = getLogger(__name__)
 
@@ -60,8 +60,7 @@ class TestClassProperty(TestCase):
         a.x = 401
         assert a.x == 401
 
-        with ExpectedException(AttributeError):
-            a.y = 501
+        self.assertRaises(AttributeError, setattr, a, 'y', 501)
 
         assert AllTheAnswers.x == 42
         assert AllTheAnswers.y == 43

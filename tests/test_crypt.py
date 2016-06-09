@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-import os
+from unittest import TestCase
 
-from testtools import TestCase
+import os
 
 from auxlib import crypt
 from auxlib.crypt import AuthenticationError, encrypt, decrypt
