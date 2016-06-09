@@ -298,6 +298,11 @@ TODO:
   - alternate field names
   - add dump_if_null field option
   - add help/description parameter to Field
+  - consider leveraging slots
+  - collect all validation errors before raising
+  - Allow returning string error message for validation instead of False
+  - profile and optimize
+  - use boltons instead of dateutil
 
 
 Optional Field Properties:
@@ -463,7 +468,7 @@ class Field(object):
         """
         # note here calling, but not assigning; could lead to unexpected behavior
         if isinstance(val, self._type) and (self._validation is None or self._validation(val)):
-                return val
+            return val
         elif val is None and self.nullable:
             return val
         else:

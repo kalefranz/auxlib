@@ -3,6 +3,8 @@
 from __future__ import print_function, division, absolute_import
 from functools import reduce
 
+from .compat import text_type
+
 
 # http://stackoverflow.com/a/14620633/2127762
 class AttrDict(dict):
@@ -54,6 +56,10 @@ def first(seq, key=lambda x: bool(x), default=None, apply=lambda x: x):
     return next((apply(x) for x in seq if key(x)), default)
 
 
+def firstitem(map, key=lambda k, v: bool(k), default=None, apply=lambda k, v: (k, v)):
+    return next((apply(k, v) for k, v in map if key(k, v)), default)
+
+
 def last(seq, key=lambda x: bool(x), default=None, apply=lambda x: x):
     return next((apply(x) for x in reversed(seq) if key(x)), default)
 
@@ -67,4 +73,8 @@ def call_each(seq):
     Returns: None
 
     """
-    reduce(lambda _, y: y(), seq)
+    try:
+        reduce(lambda _, y: y(), seq)
+    except TypeError as e:
+        if text_type(e) != "reduce() of empty sequence with no initial value":
+            raise
