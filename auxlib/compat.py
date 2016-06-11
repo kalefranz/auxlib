@@ -7,9 +7,9 @@ try:
 except ImportError:
     from ordereddict import OrderedDict as odict
 
-from ._vendor.five import with_metaclass  # NOQA
+from ._vendor.five import with_metaclass, WhateverIO as StringIO  # NOQA
 from ._vendor.six import (string_types, text_type, integer_types, iteritems, itervalues,
                           iterkeys, wraps)  # NOQA
 
 NoneType = type(None)
-primitive_types = chain(string_types, integer_types, (float, complex, bool, NoneType))
+primitive_types = tuple(chain(string_types, integer_types, (float, complex, bool, NoneType)))
