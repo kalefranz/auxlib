@@ -94,8 +94,8 @@ def numberify(value):
     Examples:
         >>> [numberify(x) for x in ('1234', 1234, '0755', 0o0755, False, 0, '0', True, 1, '1')]
           [1234, 1234, 755, 493, 0, 0, 0, 1, 1, 1]
-        >>> [numberify(x) for x in ('12.34', 12.34, 1.2+3.4j, '1.2+3.4j')]
-        [12.34, 12.34, (1.2+3.4j), (1.2+3.4j)]
+        >>> [numberify(x) for x in ('12.34', 12.34, 1.2+3.5j, '1.2+3.5j')]
+        [12.34, 12.34, (1.2+3.5j), (1.2+3.5j)]
 
     """
     if isinstance(value, bool):
