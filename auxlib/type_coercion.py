@@ -1,32 +1,111 @@
 """Collection of functions to coerce conversion of types with an intelligent guess."""
-import collections
-import re
+from itertools import chain
 
-from .compat import integer_types, string_types, iteritems, text_type
-from .decorators import memoize
+from re import compile, IGNORECASE
+from .compat import integer_types, string_types, text_type, isiterable
+from .decorators import memoize, memoizeproperty
 
+__all__ = ["boolify", "typify", "maybecall", "listify", "numberify"]
 
-__all__ = ["boolify", "typify", "maybecall", "listify"]
-
-BOOLISH = ("true", "yes", "on", "y")
+BOOLISH_TRUE = ("true", "yes", "on", "y")
+BOOLISH_FALSE = ("false", "off", "n", "no", "non", "none", "")
 BOOLABLE_TYPES = integer_types + (bool, float, complex, list, set, dict, tuple)
+NUMBER_TYPES = integer_types + (float, complex)
+
+NO_MATCH = object()
 
 
-def _generate_regex_type_map(func=None):
-    RE_BOOLEAN_TRUE = re.compile(r'^true$|^yes$|^on$', re.IGNORECASE)
-    RE_BOOLEAN_FALSE = re.compile(r'^false$|^no$|^off$', re.IGNORECASE)
-    RE_INTEGER = re.compile(r'^[0-9]+$')
-    RE_FLOAT = re.compile(r'^[0-9]+\.[0-9]+$')
-    RE_NONE = re.compile(r'^None$', re.IGNORECASE)
+class _Regex(object):
 
-    REGEX_TYPE_MAP = dict({RE_BOOLEAN_TRUE: True,
-                           RE_BOOLEAN_FALSE: False,
-                           RE_INTEGER: int,
-                           RE_FLOAT: float,
-                           RE_NONE: None, })
+    @memoizeproperty
+    def BOOLEAN_TRUE(self):
+        return compile(r'^true$|^yes$|^on$', IGNORECASE), True
 
-    func.REGEX_TYPE_MAP = REGEX_TYPE_MAP
-    return REGEX_TYPE_MAP
+    @memoizeproperty
+    def BOOLEAN_FALSE(self):
+        return compile(r'^false$|^no$|^off$', IGNORECASE), False
+
+    @memoizeproperty
+    def NONE(self):
+        return compile(r'^none$|^null$', IGNORECASE), None
+
+    @memoizeproperty
+    def INT(self):
+        return compile(r'^[-+]?\d+$'), int
+
+    @memoizeproperty
+    def BIN(self):
+        return compile(r'^[-+]?0[bB][01]+$'), bin
+
+    @memoizeproperty
+    def OCT(self):
+        return compile(r'^[-+]?0[oO][0-7]+$'), oct
+
+    @memoizeproperty
+    def HEX(self):
+        return compile(r'^[-+]?0[xX][0-9a-fA-F]+$'), hex
+
+    @memoizeproperty
+    def FLOAT(self):
+        return compile(r'^[-+]?(\d+(\.\d*)?|\.\d+)([eE][-+]?\d+)?$'), float
+
+    @memoizeproperty
+    def COMPLEX(self):
+        return (compile(r'^(?:[-+]?(\d+(\.\d*)?|\.\d+)([eE][-+]?\d+)?)?'  # maybe first float
+                        r'[-+]?(\d+(\.\d*)?|\.\d+)([eE][-+]?\d+)?j$'),     # second float with j
+                complex)
+
+    @property
+    def numbers(self):
+        yield self.INT
+        yield self.FLOAT
+        yield self.BIN
+        yield self.OCT
+        yield self.HEX
+        yield self.COMPLEX
+
+    @property
+    def boolean(self):
+        yield self.BOOLEAN_TRUE
+        yield self.BOOLEAN_FALSE
+
+    @property
+    def none(self):
+        yield self.NONE
+
+    def convert_number(self, value_string):
+        return self._convert(value_string, (self.numbers, ))
+
+    def convert(self, value_string):
+        return self._convert(value_string, (self.boolean, self.none, self.numbers, ))
+
+    def _convert(self, value_string, type_list):
+        return next((typish(value_string) if callable(typish) else typish
+                     for regex, typish in chain.from_iterable(type_list)
+                     if regex.match(value_string)),
+                    NO_MATCH)
+
+_REGEX = _Regex()
+
+
+def numberify(value):
+    """
+
+    Examples:
+        >>> [numberify(x) for x in ('1234', 1234, '0755', 0o0755, False, 0, '0', True, 1, '1')]
+          [1234, 1234, 755, 493, 0, 0, 0, 1, 1, 1]
+        >>> [numberify(x) for x in ('12.34', 12.34, 1.2+3.4j, '1.2+3.4j')]
+        [12.34, 12.34, (1.2+3.4j), (1.2+3.4j)]
+
+    """
+    if isinstance(value, bool):
+        return int(value)
+    if isinstance(value, NUMBER_TYPES):
+        return value
+    candidate = _REGEX.convert_number(value)
+    if candidate is not NO_MATCH:
+        return candidate
+    raise ValueError("Cannot convert {0} to a number.".format(value))
 
 
 def boolify(value):
@@ -45,12 +124,13 @@ def boolify(value):
         [True, False, True, False, False, True, True]
         >>> [boolify(x) for x in ("true", "yes", "on", "y")]
         [True, True, True, True]
-        >>> [boolify(x) for x in ("no", "non", "none", "off")]
-        [False, False, False, False]
+        >>> [boolify(x) for x in ("no", "non", "none", "off", "")]
+        [False, False, False, False, False]
         >>> [boolify(x) for x in ([], set(), dict(), tuple())]
         [False, False, False, False]
         >>> [boolify(x) for x in ([1], set([False]), dict({'a': 1}), tuple([2]))]
         [True, True, True, True]
+
     """
     # cast number types naturally
     if isinstance(value, BOOLABLE_TYPES):
@@ -59,10 +139,23 @@ def boolify(value):
     val = text_type(value).strip().lower().replace('.', '', 1)
     if val.isnumeric():
         return bool(float(val))
-    elif val in BOOLISH:  # now look for truthy strings
+    elif val in BOOLISH_TRUE:
         return True
-    else:  # must be False
+    elif val in BOOLISH_FALSE:
         return False
+    else:  # must be False
+        try:
+            return bool(complex(val))
+        except ValueError:
+            raise ValueError("The value {0} cannot be boolified.".format(repr(value)))
+
+
+def boolify_truthy_string_ok(value):
+    try:
+        return boolify(value)
+    except ValueError:
+        assert isinstance(value, string_types), repr(value)
+        return True
 
 
 @memoize
@@ -95,19 +188,28 @@ def typify(value, type_hint=None):
     if isinstance(value, string_types):
         value = value.strip()
     elif type_hint is None:
-        # can't do anything because value isn't a string and there' no type hint
+        # can't do anything because value isn't a string and there's no type hint
         return value
 
     # now we either have a stripped string, a type hint, or both
     # use the hint if it exists
     if type_hint is not None:
-        return boolify(value) if type_hint == bool else type_hint(value)
+        if type_hint == bool:
+            return boolify(value)
+        elif isiterable(type_hint):
+            type_hint = set(type_hint)
+            if not (type_hint - NUMBER_TYPES):
+                return numberify(value)
+            elif not (type_hint - string_types):
+                return text_type(value)
+            raise NotImplementedError()
+        else:
+            return type_hint(value)
 
     # no type hint, so try to match with the regex patterns
-    for regex, typish in iteritems(getattr(typify, 'REGEX_TYPE_MAP', None)
-                                   or _generate_regex_type_map(typify)):
-        if regex.match(value):
-            return typish(value) if callable(typish) else typish
+    candidate = _REGEX.convert(value)
+    if candidate is not NO_MATCH:
+        return candidate
 
     # nothing has caught so far; give up, and return the value that was given
     return value
@@ -117,23 +219,22 @@ def maybecall(value):
     return value() if callable(value) else value
 
 
-def listify(val):
+def listify(val, return_type=tuple):
     """
     Examples:
-        >>> listify('abc')
+        >>> listify('abc', return_type=list)
         ['abc']
         >>> listify(None)
-        []
+        ()
         >>> listify(False)
-        [False]
-        >>> listify(('a', 'b', 'c'))
+        (False,)
+        >>> listify(('a', 'b', 'c'), return_type=list)
         ['a', 'b', 'c']
     """
+    # TODO: flatlistify((1, 2, 3), 4, (5, 6, 7))
     if val is None:
-        return []
-    elif isinstance(val, string_types):
-        return [val]
-    elif isinstance(val, collections.Iterable):
-        return list(val)
+        return return_type()
+    elif isiterable(val):
+        return return_type(val)
     else:
-        return [val]
+        return return_type((val, ))

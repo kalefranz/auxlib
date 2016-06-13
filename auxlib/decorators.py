@@ -329,3 +329,15 @@ class classproperty(object):  # pylint: disable=C0103
 
     def setter(self, setter):
         return self.__class__(self.__get, setter)
+
+# memoize & clear:
+#     class method
+#     function
+#     classproperty
+#     property
+#     staticproperty?
+# memoizefunction
+# memoizemethod
+# memoizeproperty
+#
+#
