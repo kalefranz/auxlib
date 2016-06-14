@@ -1,16 +1,18 @@
 """Collection of functions to coerce conversion of types with an intelligent guess."""
 from itertools import chain
-
+from collections import Mapping
 from re import compile, IGNORECASE
-from .compat import integer_types, string_types, text_type, isiterable
+from .compat import integer_types, string_types, text_type, isiterable, iteritems
 from .decorators import memoize, memoizeproperty
 
 __all__ = ["boolify", "typify", "maybecall", "listify", "numberify"]
 
 BOOLISH_TRUE = ("true", "yes", "on", "y")
 BOOLISH_FALSE = ("false", "off", "n", "no", "non", "none", "")
-BOOLABLE_TYPES = integer_types + (bool, float, complex, list, set, dict, tuple)
+BOOL_COERCEABLE_TYPES = integer_types + (bool, float, complex, list, set, dict, tuple)
 NUMBER_TYPES = integer_types + (float, complex)
+NUMBER_TYPES_SET = set(NUMBER_TYPES)
+STRING_TYPES_SET = set(string_types)
 
 NO_MATCH = object()
 
@@ -133,7 +135,7 @@ def boolify(value):
 
     """
     # cast number types naturally
-    if isinstance(value, BOOLABLE_TYPES):
+    if isinstance(value, BOOL_COERCEABLE_TYPES):
         return bool(value)
     # try to coerce string into number
     val = text_type(value).strip().lower().replace('.', '', 1)
@@ -164,8 +166,8 @@ def typify(value, type_hint=None):
     An optional type_hint will try to coerce the value to that type.
 
     Args:
-        value (str, number): Usually a string, not a sequence
-        type_hint (type, optional):
+        value (Any): Usually a string, not a sequence
+        type_hint (type or Tuple[type]):
 
     Examples:
         >>> typify('32')
@@ -193,27 +195,33 @@ def typify(value, type_hint=None):
 
     # now we either have a stripped string, a type hint, or both
     # use the hint if it exists
-    if type_hint is not None:
-        if type_hint == bool:
-            return boolify(value)
-        elif isiterable(type_hint):
-            type_hint = set(type_hint)
-            if not (type_hint - NUMBER_TYPES):
-                return numberify(value)
-            elif not (type_hint - string_types):
-                return text_type(value)
-            raise NotImplementedError()
-        else:
-            return type_hint(value)
+    if isiterable(type_hint):
+        type_hint = set(type_hint)
+        if not (type_hint - NUMBER_TYPES_SET):
+            return numberify(value)
+        elif not (type_hint - STRING_TYPES_SET):
+            return text_type(value)
+        raise NotImplementedError()
+    elif type_hint is not None:
+        # coerce using the type hint, or use boolify for bool
+        return boolify(value) if type_hint == bool else type_hint(value)
+    else:
+        # no type hint, but we know value is a string, so try to match with the regex patterns
+        candidate = _REGEX.convert(value)
+        if candidate is not NO_MATCH:
+            return candidate
 
-    # no type hint, so try to match with the regex patterns
-    candidate = _REGEX.convert(value)
-    if candidate is not NO_MATCH:
-        return candidate
+        # nothing has caught so far; give up, and return the value that was given
+        return value
 
-    # nothing has caught so far; give up, and return the value that was given
-    return value
 
+def typify_data_structure(value, type_hint=None):
+    if isinstance(value, Mapping):
+        return type(value)((k, typify(v, type_hint)) for k, v in iteritems(value))
+    elif isiterable(value):
+        return type(value)(typify(v, type_hint) for v in value)
+    else:
+        return typify(value, type_hint)
 
 def maybecall(value):
     return value() if callable(value) else value
