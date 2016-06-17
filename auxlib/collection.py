@@ -25,14 +25,15 @@ class AttrDict(dict):
 
 class frozendict(dict):
 
-  def __key(self):
-    return tuple((k,self[k]) for k in sorted(self))
+    def __key(self):
+        return tuple((k, self[k]) for k in sorted(self))
 
-  def __hash__(self):
-    return hash(self.__key())
+    def __hash__(self):
+        return hash(self.__key())
 
-  def __eq__(self, other):
-    return self.__key() == other.__key()
+    def __eq__(self, other):
+        return self.__key() == other.__key()
+
 
 def first(seq, key=lambda x: bool(x), default=None, apply=lambda x: x):
     """Give the first value that satisfies the key test.

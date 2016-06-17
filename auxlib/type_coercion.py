@@ -223,6 +223,7 @@ def typify_data_structure(value, type_hint=None):
     else:
         return typify(value, type_hint)
 
+
 def maybecall(value):
     return value() if callable(value) else value
 

@@ -526,9 +526,9 @@ class DateFieldTests(TestCase):
 
     def test_assignment_error(self):
         df = DateEntity(field=NOW.isoformat())
-        self.assertRaises(ValidationError, setattr, df, 'field_w_default_w_validation', isoparse('2014'))
+        self.assertRaises(ValidationError, setattr, df, 'field_w_default_w_validation', isoparse('2014-12-12'))
 
-        self.assertRaises(ValidationError, DateEntity, field=NOW.isoformat(), field_w_default_w_validation=isoparse('2014').isoformat())
+        self.assertRaises(ValidationError, DateEntity, field=NOW.isoformat(), field_w_default_w_validation=isoparse('2014-12-12').isoformat())
 
         self.assertRaises(ValidationError, DateEntity, field='not parseable as a date')
 
