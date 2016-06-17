@@ -189,7 +189,7 @@ Chapter 3: Immutability
 Chapter X: The del and null Weeds
 ---------------------------------
 
-    >>> old_date = lambda: dateparse('1982-02-17')
+    >>> old_date = lambda: isoparse('1982-02-17')
     >>> class CarBattery(Entity):
     ...     # NOTE: default value can be a callable!
     ...     first_charge = DateField(required=False)  # default=None, nullable=False
@@ -205,7 +205,7 @@ Chapter X: The del and null Weeds
 
     >>> # first_charge is not assigned a default value. Once one is assigned, it can be deleted,
     >>> #   but it can't be made null.
-    >>> battery.first_charge = dateparse('2016-03-23')
+    >>> battery.first_charge = isoparse('2016-03-23')
     >>> battery
     CarBattery(first_charge=datetime.datetime(2016, 3, 23, 0, 0))
     >>> battery.first_charge = None
@@ -237,18 +237,17 @@ Chapter X: The del and null Weeds
 """
 from __future__ import absolute_import, division, print_function
 
-from functools import reduce
-
 from collections import Iterable
 from datetime import datetime
-from enum import Enum
+from functools import reduce
 from json import loads as json_loads, dumps as json_dumps
 from logging import getLogger
 
-from ._vendor.dateutil.parser import parse as dateparse
+from enum import Enum
+from ._vendor.boltons.timeutils import isoparse
+from .collection import AttrDict
 from .compat import (with_metaclass, string_types, text_type, integer_types, iteritems,
                      itervalues, odict)
-from .collection import AttrDict
 from .exceptions import ValidationError, Raise
 from .ish import find_or_none
 from .logz import DumpEncoder
@@ -522,7 +521,7 @@ class DateField(Field):
 
     def box(self, instance, val):
         try:
-            return dateparse(val) if isinstance(val, string_types) else val
+            return isoparse(val) if isinstance(val, string_types) else val
         except ValueError as e:
             raise ValidationError(val, msg=e)
 
