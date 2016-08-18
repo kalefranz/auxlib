@@ -60,14 +60,14 @@ setup(
     ],
 
     install_requires=requirements,
-    tests_require=["tox"],
+    # tests_require=["tox"],
     extras_require={
         'crypt': ["pycrypto"],
         'yaml': ["pyyaml"],
     },
     cmdclass={
-        'build_py': auxlib.BuildPyCommand,
-        'sdist': auxlib.SDistCommand,
-        'test': auxlib.Tox,
+        'build_py': auxlib.packaging.BuildPyCommand,
+        'sdist': auxlib.packaging.SDistCommand,
+        'test': auxlib.packaging.Tox,
     },
 )
