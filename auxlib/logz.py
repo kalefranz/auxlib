@@ -74,7 +74,7 @@ request_header_sort_dict = {
     'Host': '\x00\x00',
     'User-Agent': '\x00\x01',
 }
-def request_header_sort_key(item):
+def request_header_sort_key(item):  # NOQA
     return request_header_sort_dict.get(item[0], item[0].lower())
 
 
@@ -82,7 +82,7 @@ response_header_sort_dict = {
     'Content-Length': '\x7e\x7e\x61',
     'Connection': '\x7e\x7e\x62',
 }
-def response_header_sort_key(item):
+def response_header_sort_key(item):  # NOQA
     return response_header_sort_dict.get(item[0], item[0].lower())
 
 

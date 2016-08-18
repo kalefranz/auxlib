@@ -251,9 +251,7 @@ def find_packages(where='.', exclude=()):
         where, prefix = stack.pop(0)
         for name in listdir(where):
             fn = join(where, name)
-            if ('.' not in name and isdir(fn) and
-                    isfile(join(fn, '__init__.py'))
-                ):
+            if '.' not in name and isdir(fn) and isfile(join(fn, '__init__.py')):
                 out.append(prefix + name)
                 stack.append((fn, prefix + name + '.'))
     for pat in list(exclude) + ['ez_setup', 'distribute_setup']:
