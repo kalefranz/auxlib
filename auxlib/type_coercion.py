@@ -19,7 +19,8 @@ BOOL_COERCEABLE_TYPES = integer_types + (bool, float, complex, list, set, dict, 
 NUMBER_TYPES = integer_types + (float, complex)
 NUMBER_TYPES_SET = set(NUMBER_TYPES)
 STRING_TYPES_SET = set(string_types)
-BOOLNULL_TYPE_SET = {bool, NoneType}
+BOOLNULL_TYPE_SET = set([bool, NoneType])
+BOOLSTRING_TYPES_SET = STRING_TYPES_SET | set([bool])
 
 NO_MATCH = object()
 
@@ -221,7 +222,7 @@ def typify(value, type_hint=None):
             return text_type(value)
         elif not (type_hint - BOOLNULL_TYPE_SET):
             return boolify(value, nullable=True)
-        elif not (type_hint - (STRING_TYPES_SET | {bool})):
+        elif not (type_hint - BOOLSTRING_TYPES_SET):
             return boolify(value, return_string=True)
         else:
             raise NotImplementedError()
