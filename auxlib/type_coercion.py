@@ -17,10 +17,10 @@ BOOLISH_FALSE = ("false", "off", "n", "no", "non", "none", "")
 NULL_STRINGS = ("none", "~", "null", "\0")
 BOOL_COERCEABLE_TYPES = integer_types + (bool, float, complex, list, set, dict, tuple)
 NUMBER_TYPES = integer_types + (float, complex)
-NUMBER_TYPES_SET = set(NUMBER_TYPES)
-STRING_TYPES_SET = set(string_types)
-BOOLNULL_TYPE_SET = set([bool, NoneType])
-BOOLSTRING_TYPES_SET = STRING_TYPES_SET | set([bool])
+NUMBER_TYPES_SET = frozenset(NUMBER_TYPES)
+STRING_TYPES_SET = frozenset(string_types)
+BOOLNULL_TYPE_SET = frozenset([bool, NoneType])
+BOOLSTRING_TYPES_SET = STRING_TYPES_SET | frozenset([bool])
 
 NO_MATCH = object()
 
@@ -214,33 +214,46 @@ def typify(value, type_hint=None):
 
     # now we either have a stripped string, a type hint, or both
     # use the hint if it exists
+    if type_hint is None:
+        # no type hint, but we know value is a string, so try to match with the regex patterns
+        return _regex_typify_string(value)
+    else:
+        return _typify_with_hint(value, type_hint)
+
+
+def _typify_with_hint(value, type_hint):
     if isiterable(type_hint):
-        type_hint = set(type_hint)
-        if not (type_hint - NUMBER_TYPES_SET):
-            return numberify(value)
-        elif not (type_hint - STRING_TYPES_SET):
-            return text_type(value)
-        elif not (type_hint - BOOLNULL_TYPE_SET):
-            return boolify(value, nullable=True)
-        elif not (type_hint - BOOLSTRING_TYPES_SET):
-            return boolify(value, return_string=True)
-        else:
-            raise NotImplementedError()
-    elif type_hint is not None:
+        return _typify_with_iterable_hint(value, type_hint)
+    else:
         # coerce using the type hint, or use boolify for bool
         try:
             return boolify(value) if type_hint == bool else type_hint(value)
         except ValueError as e:
             # ValueError: invalid literal for int() with base 10: 'nope'
             raise TypeCoercionError(value, text_type(e))
-    else:
-        # no type hint, but we know value is a string, so try to match with the regex patterns
-        candidate = _REGEX.convert(value)
-        if candidate is not NO_MATCH:
-            return candidate
 
+
+def _typify_with_iterable_hint(value, type_hint):
+    type_hint = frozenset(type_hint)
+    if not (type_hint - NUMBER_TYPES_SET):
+        return numberify(value)
+    elif not (type_hint - STRING_TYPES_SET):
+        return text_type(value)
+    elif not (type_hint - BOOLNULL_TYPE_SET):
+        return boolify(value, nullable=True)
+    elif not (type_hint - BOOLSTRING_TYPES_SET):
+        return boolify(value, return_string=True)
+    else:
+        raise NotImplementedError()
+
+
+def _regex_typify_string(string):
+    candidate = _REGEX.convert(string)
+    if candidate is not NO_MATCH:
+        return candidate
+    else:
         # nothing has caught so far; give up, and return the value that was given
-        return value
+        return string
 
 
 def typify_data_structure(value, type_hint=None):
