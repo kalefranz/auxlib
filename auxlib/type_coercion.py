@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Collection of functions to coerce conversion of types with an intelligent guess."""
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import absolute_import, division, print_function
 
 from collections import Mapping
 from itertools import chain
