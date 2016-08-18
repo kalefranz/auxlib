@@ -9,7 +9,7 @@ Method #1: auxlib.packaging as a run time dependency
 
 Place the following lines in your package's main __init__.py
 
-from auxlib import get_version
+from auxlib.packaging import get_version
 __version__ = get_version(__file__)
 
 
@@ -29,9 +29,9 @@ sys.path.insert(0, src_dir)
 setup(
     version=auxlib.__version__,
     cmdclass={
-        'build_py': auxlib.BuildPyCommand,
-        'sdist': auxlib.SDistCommand,
-        'test': auxlib.Tox,
+        'build_py': auxlib.packaging.BuildPyCommand,
+        'sdist': auxlib.packaging.SDistCommand,
+        'test': auxlib.packaging.Tox,
     },
 )
 
@@ -39,7 +39,7 @@ setup(
 
 Place the following lines in your package's main __init__.py
 
-from auxlib import get_version
+from auxlib.packaging import get_version
 __version__ = get_version(__file__)
 
 
@@ -54,11 +54,11 @@ Configuring `python setup.py test` for Tox
 must use setuptools (distutils doesn't have a test cmd)
 
 setup(
-    version=auxlib.__version__,
+    version=auxlib.packaging.__version__,
     cmdclass={
-        'build_py': auxlib.BuildPyCommand,
-        'sdist': auxlib.SDistCommand,
-        'test': auxlib.Tox,
+        'build_py': auxlib.packaging.BuildPyCommand,
+        'sdist': auxlib.packaging.SDistCommand,
+        'test': auxlib.packaging.Tox,
     },
 )
 
@@ -69,11 +69,14 @@ from __future__ import print_function, division, absolute_import
 import sys
 from collections import namedtuple
 from logging import getLogger
-from os import getenv, remove
+from os import getenv, remove, listdir
 from os.path import abspath, dirname, expanduser, isdir, isfile, join
 from re import compile
 from shlex import split
 from subprocess import CalledProcessError, Popen, PIPE
+from fnmatch import fnmatchcase
+from distutils.util import convert_path
+
 try:
     from setuptools.command.build_py import build_py
     from setuptools.command.sdist import sdist
@@ -81,8 +84,8 @@ try:
 except ImportError:
     from distutils.command.build_py import build_py
     from distutils.command.sdist import sdist
-    TestCommand = object
 
+    TestCommand = object
 
 log = getLogger(__name__)
 
@@ -114,7 +117,12 @@ def _get_version_from_version_file(path):
 
 
 def _git_describe_tags(path):
-    call(path, "git update-index --refresh", raise_on_error=False)
+    try:
+        call(path, "git update-index --refresh", raise_on_error=False)
+    except CalledProcessError as e:
+        # git is probably not installed
+        log.warn(repr(e))
+        return None
     response = call(path, "git describe --tags --long", raise_on_error=False)
     if response.rc == 0:
         return response.stdout.strip()
@@ -155,7 +163,16 @@ def get_version(dunder_file):
 
     """
     path = abspath(expanduser(dirname(dunder_file)))
-    return _get_version_from_version_file(path) or _get_version_from_git_tag(path)
+    try:
+        return (_get_version_from_version_file(path)
+                or getenv('VERSION', None)
+                or _get_version_from_git_tag(path))
+    except CalledProcessError as e:
+        log.warn(repr(e))
+        return None
+    except Exception as e:
+        log.exception(e)
+        return None
 
 
 def write_version_into_init(target_dir, version):
@@ -166,7 +183,8 @@ def write_version_into_init(target_dir, version):
     for q in range(len(init_lines)):
         if init_lines[q].startswith('__version__'):
             init_lines[q] = '__version__ = "{0}"\n'.format(version)
-        elif init_lines[q].startswith(('from auxlib', 'import auxlib')):
+        elif (init_lines[q].startswith(('from auxlib', 'import auxlib'))
+              or 'auxlib.packaging' in init_lines[q]):
             init_lines[q] = None
     print("UPDATING {0}".format(target_init_file))
     remove(target_init_file)
@@ -177,6 +195,7 @@ def write_version_into_init(target_dir, version):
 def write_version_file(target_dir, version):
     assert isdir(target_dir), "Directory not found: {0}".format(target_dir)
     target_file = join(target_dir, ".version")
+    print("WRITING {0} with version {1}".format(target_file, version))
     with open(target_file, 'w') as f:
         f.write(version)
 
@@ -222,3 +241,21 @@ class Tox(TestCommand):
             args = ''
         errno = cmdline(args=args)
         sys.exit(errno)
+
+
+# swiped from setuptools
+def find_packages(where='.', exclude=()):
+    out = []
+    stack = [(convert_path(where), '')]
+    while stack:
+        where, prefix = stack.pop(0)
+        for name in listdir(where):
+            fn = join(where, name)
+            if ('.' not in name and isdir(fn) and
+                    isfile(join(fn, '__init__.py'))
+                ):
+                out.append(prefix + name)
+                stack.append((fn, prefix + name + '.'))
+    for pat in list(exclude) + ['ez_setup', 'distribute_setup']:
+        out = [item for item in out if not fnmatchcase(item, pat)]
+    return out

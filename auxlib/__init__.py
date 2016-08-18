@@ -27,7 +27,7 @@ from __future__ import absolute_import, division, print_function
 from .logz import getLogger, NullHandler
 getLogger('auxlib').addHandler(NullHandler())
 
-from .packaging import BuildPyCommand, SDistCommand, Tox, get_version  # NOQA
+from auxlib.packaging import get_version
 
 __all__ = [
     "__name__", "__version__", "__author__",
