@@ -1,9 +1,14 @@
+# -*- coding: utf-8 -*-
 """Collection of functions to coerce conversion of types with an intelligent guess."""
-from itertools import chain
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 from collections import Mapping
-from re import compile, IGNORECASE
-from .compat import integer_types, string_types, text_type, isiterable, iteritems, NoneType
+from itertools import chain
+from re import IGNORECASE, compile
+
+from .compat import NoneType, integer_types, isiterable, iteritems, string_types, text_type
 from .decorators import memoize, memoizeproperty
+from .exceptions import AuxlibError
 
 __all__ = ["boolify", "typify", "maybecall", "listify", "numberify"]
 
@@ -14,9 +19,16 @@ BOOL_COERCEABLE_TYPES = integer_types + (bool, float, complex, list, set, dict, 
 NUMBER_TYPES = integer_types + (float, complex)
 NUMBER_TYPES_SET = set(NUMBER_TYPES)
 STRING_TYPES_SET = set(string_types)
-BOOLNULL_TYPE_SET = set((bool, NoneType))
+BOOLNULL_TYPE_SET = {bool, NoneType}
 
 NO_MATCH = object()
+
+
+class TypeCoercionError(AuxlibError, ValueError):
+
+    def __init__(self, value, msg, *args, **kwargs):
+        self.value = value
+        super(TypeCoercionError, self).__init__(msg, *args, **kwargs)
 
 
 class _Regex(object):
@@ -109,10 +121,10 @@ def numberify(value):
     candidate = _REGEX.convert_number(value)
     if candidate is not NO_MATCH:
         return candidate
-    raise ValueError("Cannot convert {0} to a number.".format(value))
+    raise TypeCoercionError(value, "Cannot convert {0} to a number.".format(value))
 
 
-def boolify(value, nullable=False):
+def boolify(value, nullable=False, return_string=False):
     """Convert a number, string, or sequence type into a pure boolean.
 
     Args:
@@ -153,7 +165,9 @@ def boolify(value, nullable=False):
         try:
             return bool(complex(val))
         except ValueError:
-            raise ValueError("The value {0} cannot be boolified.".format(repr(value)))
+            if isinstance(value, string_types) and return_string:
+                return value
+            raise TypeCoercionError(value, "The value %r cannot be boolified." % value)
 
 
 def boolify_truthy_string_ok(value):
@@ -207,10 +221,17 @@ def typify(value, type_hint=None):
             return text_type(value)
         elif not (type_hint - BOOLNULL_TYPE_SET):
             return boolify(value, nullable=True)
-        raise NotImplementedError()
+        elif not (type_hint - (STRING_TYPES_SET | {bool})):
+            return boolify(value, return_string=True)
+        else:
+            raise NotImplementedError()
     elif type_hint is not None:
         # coerce using the type hint, or use boolify for bool
-        return boolify(value) if type_hint == bool else type_hint(value)
+        try:
+            return boolify(value) if type_hint == bool else type_hint(value)
+        except ValueError as e:
+            # ValueError: invalid literal for int() with base 10: 'nope'
+            raise TypeCoercionError(value, text_type(e))
     else:
         # no type hint, but we know value is a string, so try to match with the regex patterns
         candidate = _REGEX.convert(value)
