@@ -2,8 +2,8 @@
 """
 This module provides serializable, validatable, type-enforcing domain objects and data
 transfer objects. It has many of the same motivations as the python
-`Marshmallow <http://marshmallow.readthedocs.org/en/latest/why.html>`_ package. It is most
-similar to `Schematics <http://schematics.readthedocs.io/>`_.
+`Marshmallow <https://marshmallow.readthedocs.io/en/latest/why.html>`_ package. It is most
+similar to `Schematics <https://schematics.readthedocs.io/>`_.
 
 ========
 Tutorial

@@ -40,20 +40,20 @@ programming, `pyrsistent <https://github.com/tobgu/pyrsistent/>`_ has for data s
 `boltons <https://github.com/mahmoud/boltons/>`_ has generally.
 
 Major areas addressed include
-  - `packaging <http://auxlib.readthedocs.org/en/latest/reference/auxlib.packaging.html>`_
+  - `packaging <https://auxlib.readthedocs.io/en/latest/reference/auxlib.packaging.html>`_
        package versioning, with a clean and less invasive alternative to versioneer
-  - `entity <http://auxlib.readthedocs.org/en/latest/reference/auxlib.entity.html>`_
+  - `entity <https://auxlib.readthedocs.io/en/latest/reference/auxlib.entity.html>`_
        robust base class for type-enforced data models and transfer objects
-  - `type_coercion <http://auxlib.readthedocs.org/en/latest/reference/auxlib.type_coercion.html>`_
+  - `type_coercion <https://auxlib.readthedocs.io/en/latest/reference/auxlib.type_coercion.html>`_
        intelligent type coercion utilities
-  - `configuration <http://auxlib.readthedocs.org/en/latest/reference/auxlib.configuration.html>`_
+  - `configuration <https://auxlib.readthedocs.io/en/latest/reference/auxlib.configuration.html>`_
        a map implementation designed specifically to hold application configuration and
        context information
-  - `factory <http://auxlib.readthedocs.org/en/latest/reference/auxlib.factory.html>`_
+  - `factory <https://auxlib.readthedocs.io/en/latest/reference/auxlib.factory.html>`_
        factory pattern implementation
-  - `path <http://auxlib.readthedocs.org/en/latest/reference/auxlib.path.html>`_
+  - `path <https://auxlib.readthedocs.io/en/latest/reference/auxlib.path.html>`_
        file path utilities especially helpful when working with various python package formats
-  - `logz <http://auxlib.readthedocs.org/en/latest/reference/auxlib.logz.html>`_
+  - `logz <https://auxlib.readthedocs.io/en/latest/reference/auxlib.logz.html>`_
        logging initialization routines to simplify python logging setup
-  - `crypt <http://auxlib.readthedocs.org/en/latest/reference/auxlib.crypt.html>`_
+  - `crypt <https://auxlib.readthedocs.io/en/latest/reference/auxlib.crypt.html>`_
        simple, but correct, pycrypto wrapper
