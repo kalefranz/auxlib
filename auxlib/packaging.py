@@ -9,7 +9,7 @@ Method #1: auxlib.packaging as a run time dependency
 
 Place the following lines in your package's main __init__.py
 
-from auxlib.packaging import get_version
+from auxlib import get_version
 __version__ = get_version(__file__)
 
 
@@ -29,9 +29,9 @@ sys.path.insert(0, src_dir)
 setup(
     version=auxlib.__version__,
     cmdclass={
-        'build_py': auxlib.packaging.BuildPyCommand,
-        'sdist': auxlib.packaging.SDistCommand,
-        'test': auxlib.packaging.Tox,
+        'build_py': auxlib.BuildPyCommand,
+        'sdist': auxlib.SDistCommand,
+        'test': auxlib.Tox,
     },
 )
 
@@ -39,7 +39,7 @@ setup(
 
 Place the following lines in your package's main __init__.py
 
-from auxlib.packaging import get_version
+from auxlib import get_version
 __version__ = get_version(__file__)
 
 
@@ -54,11 +54,11 @@ Configuring `python setup.py test` for Tox
 must use setuptools (distutils doesn't have a test cmd)
 
 setup(
-    version=auxlib.packaging.__version__,
+    version=auxlib.__version__,
     cmdclass={
-        'build_py': auxlib.packaging.BuildPyCommand,
-        'sdist': auxlib.packaging.SDistCommand,
-        'test': auxlib.packaging.Tox,
+        'build_py': auxlib.BuildPyCommand,
+        'sdist': auxlib.SDistCommand,
+        'test': auxlib.Tox,
     },
 )
 
@@ -91,11 +91,12 @@ log = getLogger(__name__)
 
 Response = namedtuple('Response', ['stdout', 'stderr', 'rc'])
 GIT_DESCRIBE_REGEX = compile(r"(?:[_-a-zA-Z]*)"
-                             r"(?P<version>\d+\.\d+\.\d+)"
-                             r"(?:-(?P<dev>\d+)-g(?P<hash>[0-9a-f]{7}))$")
+                             r"(?P<version>[a-zA-Z0-9.]+)"
+                             r"(?:-(?P<post>\d+)-g(?P<hash>[0-9a-f]{7,}))$")
 
 
-def call(path, command, raise_on_error=True):
+def call(command, path=None, raise_on_error=True):
+    path = sys.prefix if path is None else abspath(path)
     p = Popen(split(command), cwd=path, stdout=PIPE, stderr=PIPE)
     stdout, stderr = p.communicate()
     rc = p.returncode
@@ -118,12 +119,12 @@ def _get_version_from_version_file(path):
 
 def _git_describe_tags(path):
     try:
-        call(path, "git update-index --refresh", raise_on_error=False)
+        call("git update-index --refresh", path, raise_on_error=False)
     except CalledProcessError as e:
         # git is probably not installed
         log.warn(repr(e))
         return None
-    response = call(path, "git describe --tags --long", raise_on_error=False)
+    response = call("git describe --tags --long", path, raise_on_error=False)
     if response.rc == 0:
         return response.stdout.strip()
     elif response.rc == 128 and "no names found" in response.stderr.lower():
@@ -140,13 +141,13 @@ def _git_describe_tags(path):
 
 def _get_version_from_git_tag(path):
     """Return a PEP440-compliant version derived from the git status.
-    If that fails for any reason, return the first 7 chars of the changeset hash.
+    If that fails for any reason, return the changeset hash.
     """
     m = GIT_DESCRIBE_REGEX.match(_git_describe_tags(path) or '')
     if m is None:
         return None
     version, post_commit, hash = m.groups()
-    return version if post_commit == '0' else "{0}.dev{1}+{2}".format(version, post_commit, hash)
+    return version if post_commit == '0' else "{0}.post{1}+{2}".format(version, post_commit, hash)
 
 
 def get_version(dunder_file):
@@ -164,9 +165,7 @@ def get_version(dunder_file):
     """
     path = abspath(expanduser(dirname(dunder_file)))
     try:
-        return (_get_version_from_version_file(path)
-                or getenv('VERSION', None)
-                or _get_version_from_git_tag(path))
+        return _get_version_from_version_file(path) or _get_version_from_git_tag(path)
     except CalledProcessError as e:
         log.warn(repr(e))
         return None
@@ -251,9 +250,18 @@ def find_packages(where='.', exclude=()):
         where, prefix = stack.pop(0)
         for name in listdir(where):
             fn = join(where, name)
-            if '.' not in name and isdir(fn) and isfile(join(fn, '__init__.py')):
+            if ('.' not in name and isdir(fn) and
+                    isfile(join(fn, '__init__.py'))
+                ):
                 out.append(prefix + name)
                 stack.append((fn, prefix + name + '.'))
     for pat in list(exclude) + ['ez_setup', 'distribute_setup']:
         out = [item for item in out if not fnmatchcase(item, pat)]
     return out
+
+
+if __name__ == "__main__":
+    # rewrite __init__.py in target_dir
+    target_dir = abspath(sys.argv[1])
+    version = get_version(join(target_dir, "__init__.py"))
+    write_version_into_init(target_dir, version)
