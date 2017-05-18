@@ -221,14 +221,18 @@ def clear_memoized_methods(obj, *method_names):
         if key[0] in method_names:
             del obj._memoized_results[key]
 
-    property_dict = obj._cache_
+    try:
+        property_dict = obj._cache_
+    except AttributeError:
+        property_dict = obj._cache_ = {}
+
     for prop in method_names:
         inner_attname = '__%s' % prop
         if inner_attname in property_dict:
             del property_dict[inner_attname]
 
 
-def memoizedproperty(func):
+def memoizeproperty(func):
     """
     Decorator to cause a method to cache it's results in self for each
     combination of inputs and return the cached result on subsequent calls.
@@ -236,7 +240,7 @@ def memoizedproperty(func):
 
     >>> class Foo (object):
     ...   _x = 1
-    ...   @memoizedproperty
+    ...   @memoizeproperty
     ...   def foo(self):
     ...     self._x += 1
     ...     print('updating and returning {0}'.format(self._x))
@@ -258,15 +262,18 @@ def memoizedproperty(func):
     inner_attname = '__%s' % func.__name__
 
     def new_fget(self):
-        if not hasattr(self, '_cache_'):
-            self._cache_ = dict()
-        cache = self._cache_
+        try:
+            cache = self._cache_
+        except AttributeError:
+            cache = self._cache_ = {}
         if inner_attname not in cache:
             cache[inner_attname] = func(self)
         return cache[inner_attname]
 
     return property(new_fget)
 
+
+memoizedproperty = memoizeproperty
 
 # def memoized_property(fget):
 #     """

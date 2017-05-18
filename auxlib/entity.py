@@ -765,6 +765,8 @@ class Entity(object):
             # TODO: re-enable once aliases are implemented
             # if key.startswith('_'):
             #     return False
+            if '__' in key:
+                return False
             try:
                 getattr(self, key)
                 return True
