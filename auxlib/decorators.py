@@ -2,7 +2,7 @@ from __future__ import absolute_import, division, print_function
 from collections import Hashable
 from types import GeneratorType
 
-from .compat import wraps
+from ._vendor.six import wraps
 
 # TODO: spend time filling out functionality and make these more robust
 
@@ -221,9 +221,13 @@ def clear_memoized_methods(obj, *method_names):
         if key[0] in method_names:
             del obj._memoized_results[key]
 
-    property_dict = obj.__dict__
+    try:
+        property_dict = obj._cache_
+    except AttributeError:
+        property_dict = obj._cache_ = {}
+
     for prop in method_names:
-        inner_attname = '_{0}'.format(prop)
+        inner_attname = '__%s' % prop
         if inner_attname in property_dict:
             del property_dict[inner_attname]
 
@@ -255,16 +259,21 @@ def memoizeproperty(func):
     >>> foo1.foo
     2
     """
-    inner_attname = '_{0}'.format(func.__name__)
+    inner_attname = '__%s' % func.__name__
 
     def new_fget(self):
-        self_dict = self.__dict__
-        if inner_attname not in self_dict:
-            self_dict[inner_attname] = func(self)
-        return self_dict[inner_attname]
+        try:
+            cache = self._cache_
+        except AttributeError:
+            cache = self._cache_ = {}
+        if inner_attname not in cache:
+            cache[inner_attname] = func(self)
+        return cache[inner_attname]
 
     return property(new_fget)
 
+
+memoizedproperty = memoizeproperty
 
 # def memoized_property(fget):
 #     """

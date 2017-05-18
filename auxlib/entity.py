@@ -2,8 +2,8 @@
 """
 This module provides serializable, validatable, type-enforcing domain objects and data
 transfer objects. It has many of the same motivations as the python
-`Marshmallow <https://marshmallow.readthedocs.io/en/latest/why.html>`_ package. It is most
-similar to `Schematics <https://schematics.readthedocs.io/>`_.
+`Marshmallow <http://marshmallow.readthedocs.org/en/latest/why.html>`_ package. It is most
+similar to `Schematics <http://schematics.readthedocs.io/>`_.
 
 ========
 Tutorial
@@ -237,18 +237,19 @@ Chapter X: The del and null Weeds
 """
 from __future__ import absolute_import, division, print_function
 
-from collections import Iterable
+from collections import Iterable, Sequence, Mapping
+from copy import deepcopy
 from datetime import datetime
+from enum import Enum
 from functools import reduce
-from json import loads as json_loads, dumps as json_dumps
+from json import JSONEncoder, dumps as json_dumps, loads as json_loads
 from logging import getLogger
 
-from enum import Enum
 from ._vendor.boltons.timeutils import isoparse
-from .collection import AttrDict
-from .compat import (with_metaclass, string_types, text_type, integer_types, iteritems,
-                     itervalues, odict)
-from .exceptions import ValidationError, Raise
+from .collection import AttrDict, frozendict, make_immutable
+from .compat import (integer_types, iteritems, itervalues, odict, string_types, text_type,
+                     with_metaclass, isiterable)
+from .exceptions import Raise, ValidationError
 from .ish import find_or_none
 from .logz import DumpEncoder
 from .type_coercion import maybecall
@@ -290,6 +291,8 @@ TODO:
   - Allow returning string error message for validation instead of False
   - profile and optimize
   - use boltons instead of dateutil
+  - correctly implement copy and deepcopy on fields and Entity, DictSafeMixin
+    http://stackoverflow.com/questions/1500718/what-is-the-right-way-to-override-the-copy-deepcopy-operations-on-an-object-in-p
 
 
 Optional Field Properties:
@@ -367,12 +370,12 @@ class Field(object):
 
     def __init__(self, default=None, required=True, validation=None,
                  in_dump=True, nullable=False, immutable=False):
-        self._default = default if callable(default) else self.box(None, default)
         self._required = required
         self._validation = validation
         self._in_dump = in_dump
         self._nullable = nullable
         self._immutable = immutable
+        self._default = default if callable(default) else self.box(None, default)
         if default is not None:
             self.validate(None, self.box(None, maybecall(default)))
 
@@ -572,12 +575,12 @@ class ListField(Field):
         elif isinstance(val, string_types):
             raise ValidationError("Attempted to assign a string to ListField {0}"
                                   "".format(self.name))
-        elif isinstance(val, Iterable):
+        elif isiterable(val):
             et = self._element_type
             if isinstance(et, type) and issubclass(et, Entity):
                 return self._type(v if isinstance(v, et) else et(**v) for v in val)
             else:
-                return self._type(val)
+                return make_immutable(val) if self.immutable else self._type(val)
         else:
             raise ValidationError(val, msg="Cannot assign a non-iterable value to "
                                            "{0}".format(self.name))
@@ -609,9 +612,26 @@ class MutableListField(ListField):
 
 
 class MapField(Field):
-    _type = dict
-    __eq__ = dict.__eq__
-    __hash__ = dict.__hash__
+    _type = frozendict
+
+    def __init__(self, default=None, required=True, validation=None,
+                 in_dump=True, nullable=False):
+        super(MapField, self).__init__(default, required, validation, in_dump, nullable, True)
+
+    def box(self, instance, val):
+        # TODO: really need to make this recursive to make any lists or maps immutable
+        if val is None:
+            return self._type()
+        elif isiterable(val):
+            val = make_immutable(val)
+            if not isinstance(val, Mapping):
+                raise ValidationError(val, msg="Cannot assign a non-iterable value to "
+                                               "{0}".format(self.name))
+            return val
+        else:
+            raise ValidationError(val, msg="Cannot assign a non-iterable value to "
+                                           "{0}".format(self.name))
+
 
 
 class ComposableField(Field):
@@ -631,7 +651,8 @@ class ComposableField(Field):
             # assuming val is a dict now
             try:
                 # if there is a key named 'self', have to rename it
-                val['slf'] = val.pop('self')
+                if hasattr(val, 'pop'):
+                    val['slf'] = val.pop('self')
             except KeyError:
                 pass  # no key of 'self', so no worries
             return val if isinstance(val, self._type) else self._type(**val)
@@ -668,11 +689,12 @@ class EntityType(type):
 
     def __init__(cls, name, bases, attr):
         super(EntityType, cls).__init__(name, bases, attr)
-        cls.__fields__ = odict(cls.__fields__) if hasattr(cls, '__fields__') else odict()
-        cls.__fields__.update(sorted(((name, field.set_name(name))
+        fields = odict(cls.__fields__) if hasattr(cls, '__fields__') else odict()
+        fields.update(sorted(((name, field.set_name(name))
                                       for name, field in iteritems(cls.__dict__)
                                       if isinstance(field, Field)),
                                      key=lambda item: item[1]._order_helper))
+        cls.__fields__ = frozendict(fields)
         if hasattr(cls, '__register__'):
             cls.__register__()
 
@@ -689,6 +711,7 @@ class EntityType(type):
 @with_metaclass(EntityType)
 class Entity(object):
     __fields__ = odict()
+    _lazy_validate = False
 
     def __init__(self, **kwargs):
         for key, field in iteritems(self.__fields__):
@@ -705,7 +728,8 @@ class Entity(object):
             except ValidationError:
                 if kwargs[key] is not None or field.required:
                     raise
-        self.validate()
+        if not self._lazy_validate:
+            self.validate()
 
     @classmethod
     def from_objects(cls, *objects, **override_fields):
@@ -738,7 +762,10 @@ class Entity(object):
 
     def __repr__(self):
         def _valid(key):
-            if key.startswith('_'):
+            # TODO: re-enable once aliases are implemented
+            # if key.startswith('_'):
+            #     return False
+            if '__' in key:
                 return False
             try:
                 getattr(self, key)
@@ -810,3 +837,78 @@ class ImmutableEntity(Entity):
             raise AttributeError("Deletion not allowed. {0} is immutable."
                                  .format(self.__class__.__name__))
         super(ImmutableEntity, self).__delattr__(item)
+
+
+class DictSafeMixin(object):
+
+    def __getitem__(self, item):
+        return getattr(self, item)
+
+    def __setitem__(self, key, value):
+        setattr(self, key, value)
+
+    def __delitem__(self, key):
+        delattr(self, key)
+
+    def get(self, item, default=None):
+        return getattr(self, item, default)
+
+    def __contains__(self, item):
+        value = getattr(self, item, None)
+        if value is None:
+            return False
+        field = self.__fields__[item]
+        if isinstance(field, (MapField, ListField)):
+            return len(value) > 0
+        return True
+
+    def __iter__(self):
+        for key in self.__fields__:
+            if key in self:
+                yield key
+
+    def iteritems(self):
+        for key in self.__fields__:
+            if key in self:
+                yield key, getattr(self, key)
+
+    def items(self):
+        return self.iteritems()
+
+    def copy(self):
+        return self.__class__(**self.dump())
+
+    def setdefault(self, key, default_value):
+        if key not in self:
+            setattr(self, key, default_value)
+
+    def update(self, E=None, **F):
+        # D.update([E, ]**F) -> None.  Update D from dict/iterable E and F.
+        # If E present and has a .keys() method, does:     for k in E: D[k] = E[k]
+        # If E present and lacks .keys() method, does:     for (k, v) in E: D[k] = v
+        # In either case, this is followed by: for k in F: D[k] = F[k]
+        if E is not None:
+            if hasattr(E, 'keys'):
+                for k in E:
+                    self[k] = E[k]
+            else:
+                for k, v in iteritems(E):
+                    self[k] = v
+        for k in F:
+            self[k] = F[k]
+
+
+class EntityEncoder(JSONEncoder):
+    # json.dumps(obj, cls=SetEncoder)
+    def default(self, obj):
+        if hasattr(obj, 'dump'):
+            return obj.dump()
+        elif hasattr(obj, '__json__'):
+            return obj.__json__()
+        elif hasattr(obj, 'to_json'):
+            return obj.to_json()
+        elif hasattr(obj, 'as_json'):
+            return obj.as_json()
+        elif isinstance(obj, Enum):
+            return obj.value
+        return JSONEncoder.default(self, obj)
