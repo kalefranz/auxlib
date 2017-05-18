@@ -36,7 +36,7 @@ class Blank(object):
 
 class SampleEntity(Entity):
     string_field = StringField()
-    string_field_w_default = StringField('default')
+    string_field_w_default = StringField('default', aliases=('sf1', 'sf2'))
     integer_field = IntField()
     integer_field_w_default = IntField(42)
     enum_field = EnumField(ChooseOne)
@@ -45,7 +45,7 @@ class SampleEntity(Entity):
 
 
 class DerivedSampleEntity(SampleEntity):
-    string_field_w_default = StringField('new_default')
+    string_field_w_default = StringField('new_default', aliases=('sf1', 'sf3'))
     choice = EnumField(ChooseOne, required=False)
     new_field = IntField()
     enum_field = ChooseOne.A
@@ -183,6 +183,35 @@ class EntityTests(TestCase):
 
         del se_dumped['string_field']
         self.assertRaises(ValidationError, SampleEntity.from_json, jsondumps(se_dumped))
+
+    def test_aliases(self):
+        se = SampleEntity(string_field='bazaar', integer_field=28, enum_field=ChooseOne.B,
+                          string_field_w_default="d0")
+        assert se.string_field_w_default == 'd0'
+
+        se = SampleEntity(string_field='bazaar', integer_field=28, enum_field=ChooseOne.B,
+                          sf1="d1")
+        assert se.string_field_w_default == 'd1'
+
+        se = SampleEntity(string_field='bazaar', integer_field=28, enum_field=ChooseOne.B,
+                          sf2="d2")
+        assert se.string_field_w_default == 'd2'
+        assert se.dump()["string_field_w_default"] == 'd2'
+        assert 'sf2' not in se.dump()
+
+        de = DerivedSampleEntity(18, string_field='bazaar', integer_field=28,
+                                 string_field_w_default="d0")
+        assert de.string_field_w_default == 'd0'
+
+        de = DerivedSampleEntity(18, string_field='bazaar', integer_field=28,
+                                 sf1="d1")
+        assert de.string_field_w_default == 'd1'
+
+        de = DerivedSampleEntity(18, string_field='bazaar', integer_field=28,
+                                 sf3="d3")
+        assert de.string_field_w_default == 'd3'
+        assert de.dump()["string_field_w_default"] == 'd3'
+        assert 'sf3' not in se.dump()
 
 
 class MiscFieldTests(TestCase):
