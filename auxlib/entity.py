@@ -246,7 +246,7 @@ from json import JSONEncoder, dumps as json_dumps, loads as json_loads
 from logging import getLogger
 
 from ._vendor.boltons.timeutils import isoparse
-from .collection import AttrDict, frozendict, make_immutable
+from .collection import AttrDict, frozendict, make_immutable, NULL
 from .compat import (integer_types, iteritems, itervalues, odict, string_types, text_type,
                      with_metaclass, isiterable)
 from .exceptions import Raise, ValidationError
@@ -368,16 +368,19 @@ class Field(object):
     #   on __prepare__.  Strategy lifted from http://stackoverflow.com/a/4460034/2127762
     _order_helper = 0
 
-    def __init__(self, default=None, required=True, validation=None,
-                 in_dump=True, nullable=False, immutable=False, aliases=()):
+    def __init__(self, default=NULL, required=True, validation=None,
+                 in_dump=True, default_in_dump=True, nullable=False, immutable=False, aliases=()):
         self._required = required
         self._validation = validation
         self._in_dump = in_dump
+        self._default_in_dump = default_in_dump
         self._nullable = nullable
         self._immutable = immutable
         self._aliases = aliases
-        self._default = default if callable(default) else self.box(None, default)
-        if default is not None:
+        if default is NULL:
+            self._default = NULL
+        else:
+            self._default = default if callable(default) else self.box(None, default)
             self.validate(None, self.box(None, maybecall(default)))
 
         self._order_helper = Field._order_helper
@@ -406,12 +409,10 @@ class Field(object):
             log.error("The name attribute has not been set for this field.")
             raise AttributeError("The name attribute has not been set for this field.")
         except KeyError:
-            if self.default is not None:
-                val = maybecall(self.default)  # default *can* be a callable
-            elif self._nullable:
-                return None
-            else:
+            if self.default is NULL:
                 raise AttributeError("A value for {0} has not been set".format(self.name))
+            else:
+                val = maybecall(self.default)  # default *can* be a callable
         if val is None and not self.nullable:
             # means the "tricky edge case" was activated in __delete__
             raise AttributeError("The {0} field has been deleted.".format(self.name))
@@ -482,6 +483,10 @@ class Field(object):
         return self._in_dump
 
     @property
+    def default_in_dump(self):
+        return self._default_in_dump
+
+    @property
     def nullable(self):
         return self.is_nullable
 
@@ -535,13 +540,13 @@ class DateField(Field):
 
 class EnumField(Field):
 
-    def __init__(self, enum_class, default=None, required=True, validation=None,
-                 in_dump=True, nullable=False, immutable=False):
+    def __init__(self, enum_class, default=NULL, required=True, validation=None,
+                 in_dump=True, default_in_dump=True, nullable=False, immutable=False):
         if not issubclass(enum_class, Enum):
             raise ValidationError(None, msg="enum_class must be an instance of Enum")
         self._type = enum_class
         super(EnumField, self).__init__(default, required, validation,
-                                        in_dump, nullable, immutable)
+                                        in_dump, default_in_dump, nullable, immutable)
 
     def box(self, instance, val):
         if val is None:
@@ -558,17 +563,17 @@ class EnumField(Field):
                 raise ValidationError(val, msg=e1)
 
     def dump(self, val):
-        return None if val is None else val.value
+        return None if val in (None, NULL) else val.value
 
 
 class ListField(Field):
     _type = tuple
 
-    def __init__(self, element_type, default=None, required=True, validation=None,
-                 in_dump=True, nullable=False, immutable=False):
+    def __init__(self, element_type, default=NULL, required=True, validation=None,
+                 in_dump=True, default_in_dump=True, nullable=False, immutable=False):
         self._element_type = element_type
         super(ListField, self).__init__(default, required, validation,
-                                        in_dump, nullable, immutable)
+                                        in_dump, default_in_dump, nullable, immutable)
 
     def box(self, instance, val):
         if val is None:
@@ -615,9 +620,10 @@ class MutableListField(ListField):
 class MapField(Field):
     _type = frozendict
 
-    def __init__(self, default=None, required=True, validation=None,
-                 in_dump=True, nullable=False):
-        super(MapField, self).__init__(default, required, validation, in_dump, nullable, True)
+    def __init__(self, default=NULL, required=True, validation=None,
+                 in_dump=True, default_in_dump=True, nullable=False):
+        super(MapField, self).__init__(default, required, validation, in_dump, default_in_dump,
+                                       nullable, True)
 
     def box(self, instance, val):
         # TODO: really need to make this recursive to make any lists or maps immutable
@@ -637,11 +643,11 @@ class MapField(Field):
 
 class ComposableField(Field):
 
-    def __init__(self, field_class, default=None, required=True, validation=None,
-                 in_dump=True, nullable=False, immutable=False):
+    def __init__(self, field_class, default=NULL, required=True, validation=None,
+                 in_dump=True, default_in_dump=True, nullable=False, immutable=False):
         self._type = field_class
         super(ComposableField, self).__init__(default, required, validation,
-                                              in_dump, nullable, immutable)
+                                              in_dump, default_in_dump, nullable, immutable)
 
     def box(self, instance, val):
         if val is None:
@@ -725,7 +731,7 @@ class Entity(object):
                 elif key in getattr(self, KEY_OVERRIDES_MAP):
                     # handle the case of fields inherited from subclass but overrode on class object
                     setattr(self, key, getattr(self, KEY_OVERRIDES_MAP)[key])
-                elif field.required and field.default is None:
+                elif field.required and field.default is NULL:
                     raise ValidationError(key, msg="{0} requires a {1} field. Instantiated with "
                                                    "{2}".format(self.__class__.__name__,
                                                                 key, kwargs))
@@ -802,9 +808,10 @@ class Entity(object):
 
     def dump(self):
         return odict((field.name, field.dump(value))
-                     for field, value in ((field, getattr(self, field.name, None))
+                     for field, value in ((field, getattr(self, field.name, NULL))
                                           for field in self.__dump_fields())
-                     if value is not None or field.nullable)
+                     if value is not NULL and not (value is field.default
+                                                   and not field.default_in_dump))
 
     @classmethod
     def __dump_fields(cls):
