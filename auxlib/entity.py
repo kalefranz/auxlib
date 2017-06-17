@@ -662,7 +662,14 @@ class ComposableField(Field):
                     val['slf'] = val.pop('self')
             except KeyError:
                 pass  # no key of 'self', so no worries
-            return val if isinstance(val, self._type) else self._type(**val)
+            if isinstance(val, self._type):
+                return val if isinstance(val, self._type) else self._type(**val)
+            elif isinstance(val, Mapping):
+                return self._type(**val)
+            elif isinstance(val, Sequence) and not isinstance(val, string_types):
+                return self._type(*val)
+            else:
+                return self._type(val)
 
     def dump(self, val):
         return None if val is None else val.dump()
@@ -696,11 +703,15 @@ class EntityType(type):
 
     def __init__(cls, name, bases, attr):
         super(EntityType, cls).__init__(name, bases, attr)
-        fields = odict(cls.__fields__) if hasattr(cls, '__fields__') else odict()
-        fields.update(sorted(((name, field.set_name(name))
-                                      for name, field in iteritems(cls.__dict__)
-                                      if isinstance(field, Field)),
-                                     key=lambda item: item[1]._order_helper))
+
+        fields = odict()
+        _field_sort_key = lambda x: x[1]._order_helper
+        for clz in reversed(type.mro(cls)):
+            clz_fields = ((name, field.set_name(name))
+                          for name, field in iteritems(clz.__dict__)
+                          if isinstance(field, Field))
+            fields.update(sorted(clz_fields, key=_field_sort_key))
+
         cls.__fields__ = frozendict(fields)
         if hasattr(cls, '__register__'):
             cls.__register__()
