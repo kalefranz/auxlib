@@ -237,20 +237,20 @@ Chapter X: The del and null Weeds
 """
 from __future__ import absolute_import, division, print_function
 
-from collections import Iterable, Sequence, Mapping
-from copy import deepcopy
+from collections import Mapping, Sequence
 from datetime import datetime
-from enum import Enum
 from functools import reduce
 from json import JSONEncoder, dumps as json_dumps, loads as json_loads
 from logging import getLogger
 
+from enum import Enum
+
 from ._vendor.boltons.timeutils import isoparse
-from .collection import AttrDict, frozendict, make_immutable, NULL
-from .compat import (integer_types, iteritems, itervalues, odict, string_types, text_type,
-                     with_metaclass, isiterable)
+from .collection import AttrDict, NULL, frozendict, make_immutable
+from .compat import integer_types, isiterable, iteritems, itervalues, odict, string_types, \
+    text_type, with_metaclass
 from .exceptions import Raise, ValidationError
-from .ish import find_or_none
+from .ish import find_or_raise
 from .logz import DumpEncoder
 from .type_coercion import maybecall
 
@@ -461,6 +461,8 @@ class Field(object):
         # note here calling, but not assigning; could lead to unexpected behavior
         if isinstance(val, self._type) and (self._validation is None or self._validation(val)):
             return val
+        elif val is NULL and not self.required:
+            return val
         elif val is None and self.nullable:
             return val
         else:
@@ -601,16 +603,12 @@ class ListField(Field):
             return val
 
     def validate(self, instance, val):
-        if val is None:
-            if not self.nullable:
-                raise ValidationError(self.name, val)
-            return None
-        else:
-            val = super(ListField, self).validate(instance, val)
+        val = super(ListField, self).validate(instance, val)
+        if val:
             et = self._element_type
             self._type(Raise(ValidationError(self.name, el, et)) for el in val
                        if not isinstance(el, et))
-            return val
+        return val
 
 
 class MutableListField(ListField):
@@ -752,13 +750,18 @@ class Entity(object):
         if not self._lazy_validate:
             self.validate()
 
+
     @classmethod
     def from_objects(cls, *objects, **override_fields):
         init_vars = dict()
         search_maps = tuple(AttrDict(o) if isinstance(o, dict) else o
                             for o in ((override_fields,) + objects))
-        for key in cls.__fields__:
-            init_vars[key] = find_or_none(key, search_maps)
+        for key, field in iteritems(cls.__fields__):
+            try:
+                init_vars[key] = find_or_raise(key, search_maps, field._aliases)
+            except AttributeError:
+                pass
+
         return cls(**init_vars)
 
     @classmethod
