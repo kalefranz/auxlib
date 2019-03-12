@@ -7,40 +7,13 @@ from collections import Mapping, Set
 from .compat import isiterable, iteritems, odict, text_type
 
 
-class _Null(object):
-    """
-    Examples:
-        >>> len(_Null())
-        0
-        >>> bool(_Null())
-        False
-        >>> _Null().__nonzero__()
-        False
-    """
-    def __nonzero__(self):
-        return self.__bool__()
-
-    def __bool__(self):
-        return False
-
-    def __len__(self):
-        return 0
-
-
-# Use this NULL object when needing to distinguish a value from None
-# For example, when parsing json, you may need to determine if a json key was given and set
-#   to null, or the key didn't exist at all.  There could be a bit of potential confusion here,
-#   because in python null == None, while here I'm defining NULL to mean 'not defined'.
-NULL = _Null()
-
-
 def make_immutable(value):
     # this function is recursive, and if nested data structures fold back on themselves,
     #   there will likely be recursion errors
     if isinstance(value, Mapping):
-        if isinstance(value, frozendict):
+        if isinstance(value, frozenodict):
             return value
-        return frozendict((k, make_immutable(v)) for k, v in iteritems(value))
+        return frozenodict((k, make_immutable(v)) for k, v in iteritems(value))
     elif isinstance(value, Set):
         if isinstance(value, frozenset):
             return value
@@ -70,16 +43,45 @@ class AttrDict(dict):
         self.__dict__ = self
 
 
-class frozendict(odict):
+class frozendict(Mapping):
+    dict_cls = dict
 
-    def __key(self):
-        return tuple((k, self[k]) for k in sorted(self))
+    def __init__(self, *args, **kwargs):
+        self._dict = self.dict_cls(*args, **kwargs)
+        self._hash = None
+
+    def __getitem__(self, key):
+        return self._dict[key]
+
+    def __contains__(self, key):
+        return key in self._dict
+
+    def copy(self, **add_or_replace):
+        return self.__class__(self, **add_or_replace)
+
+    def __iter__(self):
+        return iter(self._dict)
+
+    def __len__(self):
+        return len(self._dict)
+
+    def __repr__(self):
+        return '<%s %r>' % (self.__class__.__name__, self._dict)
 
     def __hash__(self):
-        return hash(self.__key())
+        if self._hash is None:
+            h = 0
+            for key, value in iteritems(self._dict):
+                h ^= hash((key, value))
+            self._hash = h
+        return self._hash
 
-    def __eq__(self, other):
-        return self.__key() == other.__key()
+    def __json__(self):
+        return self._dict
+
+
+class frozenodict(frozendict):
+    dict_cls = odict
 
 
 def first(seq, key=lambda x: bool(x), default=None, apply=lambda x: x):

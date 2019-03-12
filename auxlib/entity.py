@@ -245,10 +245,11 @@ from logging import getLogger
 
 from enum import Enum
 
+from . import NULL
 from ._vendor.boltons.timeutils import isoparse
-from .collection import AttrDict, NULL, frozendict, make_immutable
-from .compat import integer_types, isiterable, iteritems, itervalues, odict, string_types, \
-    text_type, with_metaclass
+from .collection import AttrDict, frozenodict, make_immutable
+from .compat import (integer_types, isiterable, iteritems, itervalues, odict, string_types,
+                     text_type, with_metaclass)
 from .exceptions import Raise, ValidationError
 from .ish import find_or_raise
 from .logz import DumpEncoder
@@ -380,8 +381,8 @@ class Field(object):
         if default is NULL:
             self._default = NULL
         else:
-            self._default = default if callable(default) else self.box(None, default)
-            self.validate(None, self.box(None, maybecall(default)))
+            self._default = default if callable(default) else self.box(None, None, default)
+            self.validate(None, self.box(None, None, maybecall(default)))
 
         self._order_helper = Field._order_helper
         Field._order_helper += 1
@@ -423,7 +424,9 @@ class Field(object):
             raise AttributeError("The {0} field is immutable.".format(self.name))
         # validate will raise an exception if invalid
         # validate will return False if the value should be removed
-        instance.__dict__[self.name] = self.validate(instance, self.box(instance, val))
+        instance.__dict__[self.name] = self.validate(
+            instance, self.box(instance, instance.__class__, val)
+        )
 
     def __delete__(self, instance):
         if self.immutable and instance._initd:
@@ -440,13 +443,13 @@ class Field(object):
         else:
             instance.__dict__.pop(self.name, None)
 
-    def box(self, instance, val):
+    def box(self, instance, instance_type, val):
         return val
 
     def unbox(self, instance, instance_type, val):
         return val
 
-    def dump(self, val):
+    def dump(self, instance, instance_type, val):
         return val
 
     def validate(self, instance, val):
@@ -504,14 +507,16 @@ class Field(object):
 class BooleanField(Field):
     _type = bool
 
-    def box(self, instance, val):
+    def box(self, instance, instance_type, val):
         return None if val is None else bool(val)
+
 
 BoolField = BooleanField
 
 
 class IntegerField(Field):
     _type = integer_types
+
 
 IntField = IntegerField
 
@@ -523,40 +528,40 @@ class NumberField(Field):
 class StringField(Field):
     _type = string_types
 
-    def box(self, instance, val):
+    def box(self, instance, instance_type, val):
         return text_type(val) if isinstance(val, NumberField._type) else val
 
 
 class DateField(Field):
     _type = datetime
 
-    def box(self, instance, val):
+    def box(self, instance, instance_type, val):
         try:
             return isoparse(val) if isinstance(val, string_types) else val
         except ValueError as e:
             raise ValidationError(val, msg=e)
 
-    def dump(self, val):
+    def dump(self, instance, instance_type, val):
         return None if val is None else val.isoformat()
 
 
 class EnumField(Field):
 
     def __init__(self, enum_class, default=NULL, required=True, validation=None,
-                 in_dump=True, default_in_dump=True, nullable=False, immutable=False):
+                 in_dump=True, default_in_dump=True, nullable=False, immutable=False, aliases=()):
         if not issubclass(enum_class, Enum):
             raise ValidationError(None, msg="enum_class must be an instance of Enum")
         self._type = enum_class
         super(EnumField, self).__init__(default, required, validation,
-                                        in_dump, default_in_dump, nullable, immutable)
+                                        in_dump, default_in_dump, nullable, immutable, aliases)
 
-    def box(self, instance, val):
+    def box(self, instance, instance_type, val):
         if val is None:
             # let the required/nullable logic handle validation for this case
             return None
         try:
             # try to box using val as an Enum name
-            return val if isinstance(val, self._type) else self._type(val)
+            return self._type(val)
         except ValueError as e1:
             try:
                 # try to box using val as an Enum value
@@ -564,7 +569,7 @@ class EnumField(Field):
             except KeyError:
                 raise ValidationError(val, msg=e1)
 
-    def dump(self, val):
+    def dump(self, instance, instance_type, val):
         return None if val in (None, NULL) else val.value
 
 
@@ -572,12 +577,12 @@ class ListField(Field):
     _type = tuple
 
     def __init__(self, element_type, default=NULL, required=True, validation=None,
-                 in_dump=True, default_in_dump=True, nullable=False, immutable=False):
+                 in_dump=True, default_in_dump=True, nullable=False, immutable=False, aliases=()):
         self._element_type = element_type
         super(ListField, self).__init__(default, required, validation,
-                                        in_dump, default_in_dump, nullable, immutable)
+                                        in_dump, default_in_dump, nullable, immutable, aliases)
 
-    def box(self, instance, val):
+    def box(self, instance, instance_type, val):
         if val is None:
             return None
         elif isinstance(val, string_types):
@@ -596,7 +601,7 @@ class ListField(Field):
     def unbox(self, instance, instance_type, val):
         return self._type() if val is None and not self.nullable else val
 
-    def dump(self, val):
+    def dump(self, instance, instance_type, val):
         if isinstance(self._element_type, type) and issubclass(self._element_type, Entity):
             return self._type(v.dump() for v in val)
         else:
@@ -616,14 +621,14 @@ class MutableListField(ListField):
 
 
 class MapField(Field):
-    _type = frozendict
+    _type = frozenodict
 
     def __init__(self, default=NULL, required=True, validation=None,
-                 in_dump=True, default_in_dump=True, nullable=False):
+                 in_dump=True, default_in_dump=True, nullable=False, immutable=True, aliases=()):
         super(MapField, self).__init__(default, required, validation, in_dump, default_in_dump,
-                                       nullable, True)
+                                       nullable, immutable, aliases)
 
-    def box(self, instance, val):
+    def box(self, instance, instance_type, val):
         # TODO: really need to make this recursive to make any lists or maps immutable
         if val is None:
             return self._type()
@@ -638,16 +643,16 @@ class MapField(Field):
                                            "{0}".format(self.name))
 
 
-
 class ComposableField(Field):
 
     def __init__(self, field_class, default=NULL, required=True, validation=None,
-                 in_dump=True, default_in_dump=True, nullable=False, immutable=False):
+                 in_dump=True, default_in_dump=True, nullable=False, immutable=False, aliases=()):
         self._type = field_class
         super(ComposableField, self).__init__(default, required, validation,
-                                              in_dump, default_in_dump, nullable, immutable)
+                                              in_dump, default_in_dump, nullable, immutable,
+                                              aliases)
 
-    def box(self, instance, val):
+    def box(self, instance, instance_type, val):
         if val is None:
             return None
         if isinstance(val, self._type):
@@ -669,7 +674,7 @@ class ComposableField(Field):
             else:
                 return self._type(val)
 
-    def dump(self, val):
+    def dump(self, instance, instance_type, val):
         return None if val is None else val.dump()
 
 
@@ -710,7 +715,7 @@ class EntityType(type):
                           if isinstance(field, Field))
             fields.update(sorted(clz_fields, key=_field_sort_key))
 
-        cls.__fields__ = frozendict(fields)
+        cls.__fields__ = frozenodict(fields)
         if hasattr(cls, '__register__'):
             cls.__register__()
 
@@ -738,7 +743,8 @@ class Entity(object):
                 if alias is not None:
                     setattr(self, key, kwargs[alias])
                 elif key in getattr(self, KEY_OVERRIDES_MAP):
-                    # handle the case of fields inherited from subclass but overrode on class object
+                    # handle the case of fields inherited from subclass
+                    # but overrode on class object
                     setattr(self, key, getattr(self, KEY_OVERRIDES_MAP)[key])
                 elif field.required and field.default is NULL:
                     raise ValidationError(key, msg="{0} requires a {1} field. Instantiated with "
@@ -749,7 +755,6 @@ class Entity(object):
                     raise
         if not self._lazy_validate:
             self.validate()
-
 
     @classmethod
     def from_objects(cls, *objects, **override_fields):
@@ -821,7 +826,7 @@ class Entity(object):
         return self.json(indent=indent, separators=separators, **kwargs)
 
     def dump(self):
-        return odict((field.name, field.dump(value))
+        return odict((field.name, field.dump(self, self.__class__, value))
                      for field, value in ((field, getattr(self, field.name, NULL))
                                           for field in self.__dump_fields())
                      if value is not NULL and not (value is field.default
