@@ -6,7 +6,7 @@ from re import IGNORECASE, compile
 from enum import Enum
 
 from .compat import NoneType, integer_types, isiterable, iteritems, string_types, text_type
-from .decorators import memoizeproperty
+from .decorators import memoizedproperty
 from .exceptions import AuxlibError
 
 __all__ = ["boolify", "typify", "maybecall", "listify", "numberify"]
@@ -31,39 +31,39 @@ class TypeCoercionError(AuxlibError, ValueError):
 
 class _Regex(object):
 
-    @memoizeproperty
+    @memoizedproperty
     def BOOLEAN_TRUE(self):
         return compile(r'^true$|^yes$|^on$', IGNORECASE), True
 
-    @memoizeproperty
+    @memoizedproperty
     def BOOLEAN_FALSE(self):
         return compile(r'^false$|^no$|^off$', IGNORECASE), False
 
-    @memoizeproperty
+    @memoizedproperty
     def NONE(self):
         return compile(r'^none$|^null$', IGNORECASE), None
 
-    @memoizeproperty
+    @memoizedproperty
     def INT(self):
         return compile(r'^[-+]?\d+$'), int
 
-    @memoizeproperty
+    @memoizedproperty
     def BIN(self):
         return compile(r'^[-+]?0[bB][01]+$'), bin
 
-    @memoizeproperty
+    @memoizedproperty
     def OCT(self):
         return compile(r'^[-+]?0[oO][0-7]+$'), oct
 
-    @memoizeproperty
+    @memoizedproperty
     def HEX(self):
         return compile(r'^[-+]?0[xX][0-9a-fA-F]+$'), hex
 
-    @memoizeproperty
+    @memoizedproperty
     def FLOAT(self):
         return compile(r'^[-+]?(\d+(\.\d*)?|\.\d+)([eE][-+]?\d+)?$'), float
 
-    @memoizeproperty
+    @memoizedproperty
     def COMPLEX(self):
         return (compile(r'^(?:[-+]?(\d+(\.\d*)?|\.\d+)([eE][-+]?\d+)?)?'  # maybe first float
                         r'[-+]?(\d+(\.\d*)?|\.\d+)([eE][-+]?\d+)?j$'),     # second float with j
@@ -98,6 +98,7 @@ class _Regex(object):
                      for regex, typish in chain.from_iterable(type_list)
                      if regex.match(value_string)),
                     NO_MATCH)
+
 
 _REGEX = _Regex()
 
@@ -255,6 +256,12 @@ def typify_data_structure(value, type_hint=None):
         return type(value)((k, typify(v, type_hint)) for k, v in iteritems(value))
     elif isiterable(value):
         return type(value)(typify(v, type_hint) for v in value)
+    elif (isinstance(value, string_types)
+          and isinstance(type_hint, type) and issubclass(type_hint, string_types)):
+        # This block is necessary because if we fall through to typify(), we end up calling
+        # .strip() on the str, when sometimes we want to preserve preceding and trailing
+        # whitespace.
+        return type_hint(value)
     else:
         return typify(value, type_hint)
 

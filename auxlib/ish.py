@@ -27,6 +27,7 @@ def _get_attr(obj, attr_name, aliases=()):
 def find_or_none(key, search_maps, aliases=(), _map_index=0):
     """Return the value of the first key found in the list of search_maps,
     otherwise return None.
+
     Examples:
         >>> from .collection import AttrDict
         >>> d1 = AttrDict({'a': 1, 'b': 2, 'c': 3, 'e': None})
@@ -41,6 +42,7 @@ def find_or_none(key, search_maps, aliases=(), _map_index=0):
         None
         >>> find_or_none('e', (d1, d2))
         6
+
     """
     try:
         attr = _get_attr(search_maps[_map_index], key, aliases)
