@@ -237,20 +237,20 @@ Chapter X: The del and null Weeds
 """
 from __future__ import absolute_import, division, print_function
 
-from collections import Iterable, Sequence, Mapping
-from copy import deepcopy
+from collections import Mapping, Sequence
 from datetime import datetime
-from enum import Enum
 from functools import reduce
 from json import JSONEncoder, dumps as json_dumps, loads as json_loads
 from logging import getLogger
 
+from enum import Enum
+
 from ._vendor.boltons.timeutils import isoparse
-from .collection import AttrDict, frozendict, make_immutable
-from .compat import (integer_types, iteritems, itervalues, odict, string_types, text_type,
-                     with_metaclass, isiterable)
+from .collection import AttrDict, NULL, frozendict, make_immutable
+from .compat import integer_types, isiterable, iteritems, itervalues, odict, string_types, \
+    text_type, with_metaclass
 from .exceptions import Raise, ValidationError
-from .ish import find_or_none
+from .ish import find_or_raise
 from .logz import DumpEncoder
 from .type_coercion import maybecall
 
@@ -368,16 +368,19 @@ class Field(object):
     #   on __prepare__.  Strategy lifted from http://stackoverflow.com/a/4460034/2127762
     _order_helper = 0
 
-    def __init__(self, default=None, required=True, validation=None,
-                 in_dump=True, nullable=False, immutable=False, aliases=()):
+    def __init__(self, default=NULL, required=True, validation=None,
+                 in_dump=True, default_in_dump=True, nullable=False, immutable=False, aliases=()):
         self._required = required
         self._validation = validation
         self._in_dump = in_dump
+        self._default_in_dump = default_in_dump
         self._nullable = nullable
         self._immutable = immutable
         self._aliases = aliases
-        self._default = default if callable(default) else self.box(None, default)
-        if default is not None:
+        if default is NULL:
+            self._default = NULL
+        else:
+            self._default = default if callable(default) else self.box(None, default)
             self.validate(None, self.box(None, maybecall(default)))
 
         self._order_helper = Field._order_helper
@@ -406,12 +409,10 @@ class Field(object):
             log.error("The name attribute has not been set for this field.")
             raise AttributeError("The name attribute has not been set for this field.")
         except KeyError:
-            if self.default is not None:
-                val = maybecall(self.default)  # default *can* be a callable
-            elif self._nullable:
-                return None
-            else:
+            if self.default is NULL:
                 raise AttributeError("A value for {0} has not been set".format(self.name))
+            else:
+                val = maybecall(self.default)  # default *can* be a callable
         if val is None and not self.nullable:
             # means the "tricky edge case" was activated in __delete__
             raise AttributeError("The {0} field has been deleted.".format(self.name))
@@ -460,6 +461,8 @@ class Field(object):
         # note here calling, but not assigning; could lead to unexpected behavior
         if isinstance(val, self._type) and (self._validation is None or self._validation(val)):
             return val
+        elif val is NULL and not self.required:
+            return val
         elif val is None and self.nullable:
             return val
         else:
@@ -480,6 +483,10 @@ class Field(object):
     @property
     def in_dump(self):
         return self._in_dump
+
+    @property
+    def default_in_dump(self):
+        return self._default_in_dump
 
     @property
     def nullable(self):
@@ -535,13 +542,13 @@ class DateField(Field):
 
 class EnumField(Field):
 
-    def __init__(self, enum_class, default=None, required=True, validation=None,
-                 in_dump=True, nullable=False, immutable=False):
+    def __init__(self, enum_class, default=NULL, required=True, validation=None,
+                 in_dump=True, default_in_dump=True, nullable=False, immutable=False):
         if not issubclass(enum_class, Enum):
             raise ValidationError(None, msg="enum_class must be an instance of Enum")
         self._type = enum_class
         super(EnumField, self).__init__(default, required, validation,
-                                        in_dump, nullable, immutable)
+                                        in_dump, default_in_dump, nullable, immutable)
 
     def box(self, instance, val):
         if val is None:
@@ -558,17 +565,17 @@ class EnumField(Field):
                 raise ValidationError(val, msg=e1)
 
     def dump(self, val):
-        return None if val is None else val.value
+        return None if val in (None, NULL) else val.value
 
 
 class ListField(Field):
     _type = tuple
 
-    def __init__(self, element_type, default=None, required=True, validation=None,
-                 in_dump=True, nullable=False, immutable=False):
+    def __init__(self, element_type, default=NULL, required=True, validation=None,
+                 in_dump=True, default_in_dump=True, nullable=False, immutable=False):
         self._element_type = element_type
         super(ListField, self).__init__(default, required, validation,
-                                        in_dump, nullable, immutable)
+                                        in_dump, default_in_dump, nullable, immutable)
 
     def box(self, instance, val):
         if val is None:
@@ -596,16 +603,12 @@ class ListField(Field):
             return val
 
     def validate(self, instance, val):
-        if val is None:
-            if not self.nullable:
-                raise ValidationError(self.name, val)
-            return None
-        else:
-            val = super(ListField, self).validate(instance, val)
+        val = super(ListField, self).validate(instance, val)
+        if val:
             et = self._element_type
             self._type(Raise(ValidationError(self.name, el, et)) for el in val
                        if not isinstance(el, et))
-            return val
+        return val
 
 
 class MutableListField(ListField):
@@ -615,9 +618,10 @@ class MutableListField(ListField):
 class MapField(Field):
     _type = frozendict
 
-    def __init__(self, default=None, required=True, validation=None,
-                 in_dump=True, nullable=False):
-        super(MapField, self).__init__(default, required, validation, in_dump, nullable, True)
+    def __init__(self, default=NULL, required=True, validation=None,
+                 in_dump=True, default_in_dump=True, nullable=False):
+        super(MapField, self).__init__(default, required, validation, in_dump, default_in_dump,
+                                       nullable, True)
 
     def box(self, instance, val):
         # TODO: really need to make this recursive to make any lists or maps immutable
@@ -637,11 +641,11 @@ class MapField(Field):
 
 class ComposableField(Field):
 
-    def __init__(self, field_class, default=None, required=True, validation=None,
-                 in_dump=True, nullable=False, immutable=False):
+    def __init__(self, field_class, default=NULL, required=True, validation=None,
+                 in_dump=True, default_in_dump=True, nullable=False, immutable=False):
         self._type = field_class
         super(ComposableField, self).__init__(default, required, validation,
-                                              in_dump, nullable, immutable)
+                                              in_dump, default_in_dump, nullable, immutable)
 
     def box(self, instance, val):
         if val is None:
@@ -656,7 +660,14 @@ class ComposableField(Field):
                     val['slf'] = val.pop('self')
             except KeyError:
                 pass  # no key of 'self', so no worries
-            return val if isinstance(val, self._type) else self._type(**val)
+            if isinstance(val, self._type):
+                return val if isinstance(val, self._type) else self._type(**val)
+            elif isinstance(val, Mapping):
+                return self._type(**val)
+            elif isinstance(val, Sequence) and not isinstance(val, string_types):
+                return self._type(*val)
+            else:
+                return self._type(val)
 
     def dump(self, val):
         return None if val is None else val.dump()
@@ -690,11 +701,15 @@ class EntityType(type):
 
     def __init__(cls, name, bases, attr):
         super(EntityType, cls).__init__(name, bases, attr)
-        fields = odict(cls.__fields__) if hasattr(cls, '__fields__') else odict()
-        fields.update(sorted(((name, field.set_name(name))
-                                      for name, field in iteritems(cls.__dict__)
-                                      if isinstance(field, Field)),
-                                     key=lambda item: item[1]._order_helper))
+
+        fields = odict()
+        _field_sort_key = lambda x: x[1]._order_helper
+        for clz in reversed(type.mro(cls)):
+            clz_fields = ((name, field.set_name(name))
+                          for name, field in iteritems(clz.__dict__)
+                          if isinstance(field, Field))
+            fields.update(sorted(clz_fields, key=_field_sort_key))
+
         cls.__fields__ = frozendict(fields)
         if hasattr(cls, '__register__'):
             cls.__register__()
@@ -725,7 +740,7 @@ class Entity(object):
                 elif key in getattr(self, KEY_OVERRIDES_MAP):
                     # handle the case of fields inherited from subclass but overrode on class object
                     setattr(self, key, getattr(self, KEY_OVERRIDES_MAP)[key])
-                elif field.required and field.default is None:
+                elif field.required and field.default is NULL:
                     raise ValidationError(key, msg="{0} requires a {1} field. Instantiated with "
                                                    "{2}".format(self.__class__.__name__,
                                                                 key, kwargs))
@@ -735,13 +750,18 @@ class Entity(object):
         if not self._lazy_validate:
             self.validate()
 
+
     @classmethod
     def from_objects(cls, *objects, **override_fields):
         init_vars = dict()
         search_maps = tuple(AttrDict(o) if isinstance(o, dict) else o
                             for o in ((override_fields,) + objects))
-        for key in cls.__fields__:
-            init_vars[key] = find_or_none(key, search_maps)
+        for key, field in iteritems(cls.__fields__):
+            try:
+                init_vars[key] = find_or_raise(key, search_maps, field._aliases)
+            except AttributeError:
+                pass
+
         return cls(**init_vars)
 
     @classmethod
@@ -802,9 +822,10 @@ class Entity(object):
 
     def dump(self):
         return odict((field.name, field.dump(value))
-                     for field, value in ((field, getattr(self, field.name, None))
+                     for field, value in ((field, getattr(self, field.name, NULL))
                                           for field in self.__dump_fields())
-                     if value is not None or field.nullable)
+                     if value is not NULL and not (value is field.default
+                                                   and not field.default_in_dump))
 
     @classmethod
     def __dump_fields(cls):

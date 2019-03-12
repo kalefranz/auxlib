@@ -233,9 +233,30 @@ class MiscFieldTests(TestCase):
 
     def test_or_none_field_option(self):
         class Clazz(Entity):
-            int_field = IntField(required=False, nullable=True)
+            int_field_1 = IntField(required=False, nullable=True)
         clazz = Clazz()
-        assert clazz.int_field is None
+        self.assertRaises(AttributeError, lambda: clazz.int_field_1)
+        assert clazz.dump() == {}
+
+        clazz.int_field_1 = None
+        assert clazz.int_field_1 is None
+        assert clazz.dump() == {'int_field_1': None}
+
+        class Clazz(Entity):
+            int_field_2 = IntField(required=True, nullable=True)
+
+        self.assertRaises(ValidationError, lambda: Clazz())
+
+    def test_default_in_dump_false(self):
+        class Clazz(Entity):
+            int_field_1 = IntField(18)
+            int_field_2 = IntField(20, default_in_dump=False)
+        clazz = Clazz()
+        assert clazz.dump() == {'int_field_1': 18}
+        clazz.int_field_2 = 22
+        assert clazz.dump() == {'int_field_1': 18, 'int_field_2': 22}
+        clazz.int_field_1 = 19
+        assert clazz.dump() == {'int_field_1': 19, 'int_field_2': 22}
 
 
 class EnumEntity(Entity):
@@ -577,7 +598,7 @@ class DateFieldTests(TestCase):
     def test_nullable_field(self):
         de = DateEntity(field=NOW)
 
-        assert de.field_wo_required_w_nullable == None
+        self.assertRaises(AttributeError, lambda: de.field_wo_required_w_nullable)
 
         self.assertRaises(ValidationError, setattr, de, 'field', None)
 
